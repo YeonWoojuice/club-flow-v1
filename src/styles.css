@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+:root {
+  --chrome-active: #3c4043;
+  --chrome-border: #3c4043;
+  --chrome-header: #202124;
+  --chrome-nav: #292a2d;
+  --chrome-text: #ffffff;
+  --chrome-text-muted: #bdc1c6;
+  --navy: #111827;
+  --navy-soft: #e5e7eb;
+  --border: #d1d5db;
+  --border-subtle: #e5e7eb;
+  --danger: #b91c1c;
+  --danger-soft: #fef2f2;
+  --danger-border: #fecaca;
+  --overlay: #11182799;
+  --shadow-modal: #11182733;
+  --panel: #ffffff;
+  --panel-muted: #f9fafb;
+  --success: #15803d;
+  --success-soft: #f0fdf4;
+  --surface: #f6f7f9;
+  --surface-detail: #edf1f5;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  --warning: #b45309;
+  --warning-soft: #fffbeb;
+}
+
+@layer base {
+  html, body, #root { height: 100%; }
+  body { background: var(--surface); color: var(--text-primary); }
+  button, input, select { font: inherit; }
+  button { cursor: pointer; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+  .font-body { font-family: Inter, Pretendard, system-ui, sans-serif; }
+  .font-data { font-family: "Geist Mono", "IBM Plex Mono", monospace; }
+}
+
+@layer components {
+  .brand-title {
+    background: linear-gradient(to top, #aeb4bb 0%, #ffffff 82%);
+    background-clip: text;
+    color: transparent;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .control {
+    height: 2.25rem;
+    width: 100%;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: white;
+    padding-inline: 0.75rem;
+    font-size: 0.75rem;
+    color: var(--text-primary);
+  }
+}
