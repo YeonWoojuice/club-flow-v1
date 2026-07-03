@@ -67,9 +67,9 @@ club-flow-responsive/
 
 코드를 작성하기 전에 반드시 해당 영역의 규칙 문서를 확인하세요.
 
-- **프론트엔드** → [`docs/frontend-rules.md`](docs/frontend-rules.md)
-- **백엔드** → [`docs/backend-rules.md`](docs/backend-rules.md)
-- **인프라** → [`docs/infra-rules.md`](docs/infra-rules.md)
+- **프론트엔드** → [`docs/development/frontend-rules.md`](docs/frontend-rules.md)
+- **백엔드** → [`docs/development/backend-rules.md`](docs/backend-rules.md)
+- **인프라** → [`docs/development/infra-rules.md`](docs/infra-rules.md)
 
 ---
 
