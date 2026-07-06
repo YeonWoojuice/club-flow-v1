@@ -1,3 +1,34 @@
 spring:
   application:
     name: backend
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/clubflow}
+    username: ${DB_USERNAME:clubflow_user}
+    password: ${DB_PASSWORD:clubflow_pass}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - openid
+              - profile
+              - email
+
+server:
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+
+app:
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
