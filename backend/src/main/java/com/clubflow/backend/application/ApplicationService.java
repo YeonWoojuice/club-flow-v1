@@ -10,6 +10,7 @@ import com.clubflow.backend.common.ConflictException;
 import com.clubflow.backend.common.NotFoundException;
 import com.clubflow.backend.generation.Generation;
 import com.clubflow.backend.generation.GenerationService;
+import com.clubflow.backend.generation.GenerationStatus;
 import com.clubflow.backend.member.GenerationMemberService;
 import com.clubflow.backend.person.Person;
 import com.clubflow.backend.person.PersonService;
@@ -64,6 +65,9 @@ public class ApplicationService {
     ) {
         Club club = clubAccessService.requireAccessibleClub(googleSub, clubId);
         Generation generation = generationService.requireGenerationInClub(request.generationId(), clubId);
+        if (generation.getStatus() != GenerationStatus.ACTIVE) {
+            throw new ConflictException("종료된 학기에는 지원자를 등록할 수 없습니다.");
+        }
         validateUniqueQuestionKeys(request.applicationAnswers());
         Person person = personService.findOrCreate(
                 club,

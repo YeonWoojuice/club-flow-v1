@@ -25,6 +25,10 @@ com.clubflow.backend/
 ├── auth/       OAuth2/OIDC, Security 설정, 현재 사용자 API
 ├── user/       서비스 로그인 사용자
 ├── club/       동아리, 운영진 권한, 동아리 API
+├── generation/ 학기와 활성/종료 상태
+├── person/     동아리에서 관리하는 사람
+├── application/ 지원 기록과 문항별 답변
+├── member/     학기별 부원
 └── common/     공통 예외와 오류 응답
 ```
 
@@ -47,6 +51,8 @@ com.clubflow.backend/
 - Service 클래스는 `@Transactional(readOnly = true)`를 기본으로 한다.
 - 쓰기 메서드에만 `@Transactional`을 선언한다.
 - 동아리 생성과 `PRESIDENT/APPROVED` 권한 생성은 반드시 같은 트랜잭션에서 처리한다.
+- 수동 지원자 등록은 person, application, application_answers 저장을 한 트랜잭션으로 처리한다.
+- 합격 처리는 application 상태 변경과 generation_member 생성을 한 트랜잭션으로 처리한다.
 - Controller에는 `@Transactional`을 붙이지 않는다.
 
 ## 인증과 권한
@@ -66,6 +72,14 @@ POST /api/auth/logout      로그아웃
 GET  /api/clubs            접근 가능한 동아리 목록
 GET  /api/clubs/{clubId}   동아리 접근 권한 확인
 POST /api/clubs            동아리와 회장 권한 생성
+GET  /api/clubs/{clubId}/generations
+POST /api/clubs/{clubId}/generations
+PUT  /api/generations/{generationId}
+GET  /api/clubs/{clubId}/applications
+POST /api/clubs/{clubId}/applications/manual
+GET  /api/applications/{applicationId}
+PATCH /api/applications/{applicationId}/status
+GET  /api/clubs/{clubId}/members
 ```
 
 - 요청 DTO는 Java `record`와 Jakarta Validation을 사용한다.
@@ -78,10 +92,15 @@ POST /api/clubs            동아리와 회장 권한 생성
 V1__create_users.sql
 V2__create_clubs.sql
 V3__create_club_staffs.sql
+V4__create_generations.sql
+V5__create_persons.sql
+V6__create_applications.sql
+V7__create_application_answers.sql
+V8__create_generation_members.sql
 ```
 
 - 파일명은 `V{버전}__{설명}.sql` 형식을 사용한다.
-- 현재 재구축 기준 V1~V3가 최초 마이그레이션이다.
+- V1~V3은 인증과 동아리, V4~V8은 학기와 지원자·부원 MVP이다.
 - 이 기준이 공유되거나 배포된 후에는 기존 마이그레이션을 수정하지 않고 새 버전을 추가한다.
 - DDL에 `IF NOT EXISTS`를 사용하지 않는다.
 

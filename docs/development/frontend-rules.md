@@ -36,6 +36,11 @@ src/
 /clubs                       내 동아리 목록
 /clubs/new                   동아리 생성
 /clubs/:clubId/dashboard     승인된 운영진 대시보드
+/clubs/:clubId/generations   학기 관리
+/clubs/:clubId/applications  지원자 목록
+/clubs/:clubId/applications/new  수동 지원자 등록
+/clubs/:clubId/applications/:applicationId  지원서 상세
+/clubs/:clubId/members       부원 목록
 ```
 
 - 인증·동아리 경계는 실제 URL로 표현한다.
