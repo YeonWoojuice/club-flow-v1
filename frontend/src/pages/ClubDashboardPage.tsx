@@ -5,6 +5,7 @@ import { getClub } from "../api/clubs";
 import { ApiError } from "../api/http";
 import { useAuth } from "../auth/AuthProvider";
 import { Brand } from "../components/Brand";
+import { ClubNavigation } from "../components/ClubNavigation";
 import { LoadingScreen } from "../components/LoadingScreen";
 import type { Club } from "../types/club";
 
@@ -47,6 +48,7 @@ export function ClubDashboardPage() {
           <div className="flex items-center gap-4 text-xs"><span className="hidden text-[var(--chrome-text-muted)] sm:inline">{user?.name}</span><button onClick={handleLogout} className="font-bold">로그아웃</button></div>
         </div>
       </header>
+      <ClubNavigation clubId={clubId} />
       <main className="mx-auto max-w-6xl px-5 py-8">
         {error ? <p role="alert" className="rounded-[8px] bg-[var(--danger-soft)] p-5 text-sm font-bold text-[var(--danger)]">{error}</p> : club && (
           <>
@@ -55,9 +57,9 @@ export function ClubDashboardPage() {
               <Link to="/clubs" className="rounded-[7px] border border-[var(--border)] bg-white px-4 py-3 text-xs font-extrabold">동아리 전환</Link>
             </div>
             <section className="mt-8 grid gap-4 sm:grid-cols-3">
-              <article className="rounded-[10px] border border-[var(--border-subtle)] bg-white p-5"><span className="text-xs font-bold text-[var(--text-secondary)]">인증 상태</span><b className="mt-3 block text-lg text-[var(--success)]">연결 완료</b><p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">Google 로그인과 자동 회원가입이 적용되었습니다.</p></article>
-              <article className="rounded-[10px] border border-[var(--border-subtle)] bg-white p-5"><span className="text-xs font-bold text-[var(--text-secondary)]">내 권한</span><b className="mt-3 block text-lg">{roleLabel[club.role]}</b><p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">동아리 생성과 동시에 승인된 회장 권한입니다.</p></article>
-              <article className="rounded-[10px] border border-[var(--border-subtle)] bg-white p-5"><span className="text-xs font-bold text-[var(--text-secondary)]">다음 작업</span><b className="mt-3 block text-lg">학기 설정</b><p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">다음 단계에서 학기·부원 도메인을 연결합니다.</p></article>
+              <Link to={`/clubs/${clubId}/generations`} className="rounded-[10px] border border-[var(--border-subtle)] bg-white p-5 transition hover:border-[var(--navy)]"><span className="text-xs font-bold text-[var(--text-secondary)]">1단계</span><b className="mt-3 block text-lg">학기 설정</b><p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">활성 학기를 만들고 종료 상태를 관리합니다.</p></Link>
+              <Link to={`/clubs/${clubId}/applications`} className="rounded-[10px] border border-[var(--border-subtle)] bg-white p-5 transition hover:border-[var(--navy)]"><span className="text-xs font-bold text-[var(--text-secondary)]">2단계</span><b className="mt-3 block text-lg">지원자 관리</b><p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">지원자를 등록하고 답변과 처리 상태를 확인합니다.</p></Link>
+              <Link to={`/clubs/${clubId}/members`} className="rounded-[10px] border border-[var(--border-subtle)] bg-white p-5 transition hover:border-[var(--navy)]"><span className="text-xs font-bold text-[var(--text-secondary)]">3단계</span><b className="mt-3 block text-lg">부원 목록</b><p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">합격 처리된 지원자의 부원 등록을 확인합니다.</p></Link>
             </section>
           </>
         )}
