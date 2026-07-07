@@ -27,7 +27,15 @@ public class SecurityConfig {
     ) throws Exception {
         http
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/actuator/health", "/error", "/oauth2/**", "/login/**").permitAll()
+                        .requestMatchers(
+                                "/actuator/health",
+                                "/error",
+                                "/oauth2/**",
+                                "/login/**",
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**"
+                        ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
                         .anyRequest().authenticated()
                 )
