@@ -1,6 +1,12 @@
 @import "tailwindcss";
 
 :root {
+  --sidebar-bg: #1e1b4b;
+  --sidebar-active: #4f46e5;
+  --sidebar-info: #2d2a6b;
+  --sidebar-border: #3730a3;
+  --sidebar-text: #c7d2fe;
+  --sidebar-text-muted: #a5b4fc;
   --chrome-active: #3c4043;
   --chrome-border: #3c4043;
   --chrome-header: #202124;
