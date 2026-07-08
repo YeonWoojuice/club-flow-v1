@@ -28,6 +28,10 @@ export class ApiError extends Error {
 
 let csrfToken: CsrfToken | null = null;
 
+export function clearCsrfToken() {
+  csrfToken = null;
+}
+
 function notifyAuthError(status: number) {
   if (status !== 401 && status !== 403) return;
   window.dispatchEvent(new CustomEvent<ApiAuthErrorDetail>(API_AUTH_ERROR_EVENT, {
@@ -45,23 +49,36 @@ async function getCsrfToken() {
   return csrfToken;
 }
 
-export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const method = (options.method ?? "GET").toUpperCase();
+function requiresCsrf(method: string) {
+  return !["GET", "HEAD", "OPTIONS"].includes(method);
+}
+
+async function sendRequest(path: string, options: RequestInit, method: string) {
   const headers = new Headers(options.headers);
 
   if (options.body) {
     headers.set("Content-Type", "application/json");
   }
-  if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
+  if (requiresCsrf(method)) {
     const csrf = await getCsrfToken();
     headers.set(csrf.headerName, csrf.token);
   }
 
-  const response = await fetch(path, {
+  return fetch(path, {
     ...options,
     credentials: "include",
     headers,
   });
+}
+
+export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const method = (options.method ?? "GET").toUpperCase();
+  let response = await sendRequest(path, options, method);
+
+  if (requiresCsrf(method) && response.status === 403) {
+    clearCsrfToken();
+    response = await sendRequest(path, options, method);
+  }
 
   if (response.status === 204) {
     return undefined as T;
