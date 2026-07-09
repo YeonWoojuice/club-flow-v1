@@ -16,8 +16,15 @@
 
 ## Tech Stack
 
-React + TypeScript 프론트엔드, Spring Boot + PostgreSQL 백엔드로 구성됩니다.
-버전을 포함한 전체 스택의 기준은 [AGENTS.md의 기술 스택 표](./AGENTS.md#기술-스택-버전의-유일한-기준)를 따릅니다.
+| 구분       | 사용 기술                                                          |
+| -------- | -------------------------------------------------------------- |
+| Frontend | React 19, TypeScript 5.8, Vite 7, Tailwind CSS 4, React Router 7 |
+| Backend  | Java 21, Spring Boot, Spring Security (OAuth2/OIDC), Spring Data JPA, springdoc OpenAPI |
+| Database | PostgreSQL, Flyway                                              |
+| Testing  | Vitest, Testing Library, JUnit 5, Testcontainers                |
+| Infra    | Docker Compose                                                  |
+
+세부 버전의 기준은 [AGENTS.md](./AGENTS.md#기술-스택-버전의-유일한-기준)를 따릅니다.
 
 ## Documentation
 
@@ -35,6 +42,11 @@ React + TypeScript 프론트엔드, Spring Boot + PostgreSQL 백엔드로 구성
 * [Backend Rules](./docs/development/backend-rules.md)
 * [Frontend Rules](./docs/development/frontend-rules.md)
 * [Infra Rules](./docs/development/infra-rules.md)
+
+### Engineering
+
+* [Decision Log](./docs/decisions/decision-log.md) — 설계 결정과 트레이드오프 기록
+* [AGENTS.md](./AGENTS.md) — 개발 규칙 단일 소스이자 AI 협업 운영 가이드
 
 ### API
 
@@ -70,8 +82,7 @@ docker compose -f Infra/docker-compose.yml up -d postgres
 변경 검증:
 
 ```bash
-(cd backend && ./gradlew test)
-(cd frontend && npm run lint && npm test && npm run build)
+./verify.sh   # 백엔드 테스트 + 프론트 린트·테스트·빌드
 ```
 
 최초 로그인 후 접근 가능한 동아리가 없으면 동아리 생성 화면으로 이동합니다. 동아리를 생성하면 `PRESIDENT/APPROVED` 권한이 함께 생성되고 대시보드로 이동합니다.
