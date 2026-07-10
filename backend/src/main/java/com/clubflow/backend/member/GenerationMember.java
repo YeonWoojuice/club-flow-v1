@@ -74,6 +74,15 @@ public class GenerationMember {
         );
     }
 
+    public static GenerationMember createFromRetention(Generation generation, Person person) {
+        return new GenerationMember(
+                generation,
+                person,
+                MemberJoinedSource.RETENTION,
+                GenerationMemberStatus.ACTIVE
+        );
+    }
+
     public UUID getId() {
         return id;
     }

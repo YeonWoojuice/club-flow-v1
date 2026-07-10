@@ -15,6 +15,14 @@ public interface GenerationMemberRepository extends JpaRepository<GenerationMemb
     @Query("""
             select member
             from GenerationMember member
+            join fetch member.person person
+            where member.generation.id = :generationId
+            """)
+    List<GenerationMember> findAllByGenerationIdWithPerson(@Param("generationId") UUID generationId);
+
+    @Query("""
+            select member
+            from GenerationMember member
             join fetch member.generation generation
             join fetch member.person person
             where generation.club.id = :clubId

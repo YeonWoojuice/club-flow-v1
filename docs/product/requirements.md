@@ -29,11 +29,13 @@
 ### 지원자
 
 - 이름, 이메일, 연락처, 학번으로 수동 등록
+- CSV/XLSX 파일 또는 Google Form 응답 Sheet에서 지원자 데이터 가져오기
 - 이메일 소문자 정규화
 - 문항별 지원서 답변 저장
 - 같은 학기 중복 지원 방지
 - 목록과 상세 조회
 - 접수, 검토 중, 합격, 불합격, 취소 상태 처리
+- 데이터 가져오기 상세 규칙은 [`docs/features/application-import/import_flow.md`](../features/application-import/import_flow.md)를 따른다.
 
 ### 부원
 
@@ -53,8 +55,8 @@
 
 ## 보류
 
-- Google Form/Sheet 실제 API 연동
-- 외부 원본·동기화 배치·필드 매핑
+- Google Form/Sheet의 주기적 동기화와 자동 가져오기 배치
+- 원본 파일 보관, 가져오기 이력, 저장된 필드 매핑 재사용
 - 운영진 초대
 - 회비, 행사, 활동 관리
 - 부원 자동 이월

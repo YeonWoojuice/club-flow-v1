@@ -34,6 +34,11 @@ server:
 
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  google-data:
+    client-id: ${GOOGLE_DATA_CLIENT_ID:}
+    client-secret: ${GOOGLE_DATA_CLIENT_SECRET:}
+    redirect-uri: ${GOOGLE_DATA_REDIRECT_URI:http://localhost:8080/api/google-data/oauth/callback}
+    encryption-key: ${GOOGLE_TOKEN_ENCRYPTION_KEY:}
 
 springdoc:
   paths-to-match: /api/**
