@@ -4,7 +4,9 @@ type Schemas = components["schemas"];
 type PreviewRowSchema = Schemas["RetentionPreviewRowResponse"];
 
 export type RetentionRowStatus = NonNullable<PreviewRowSchema["status"]>;
-export type ParsedTable = Required<Schemas["ParsedTableResponse"]>;
+export type ParsedTable = Required<Omit<Schemas["ParsedTableResponse"], "sheetId">> & {
+  sheetId: number | null;
+};
 export type ParsedWorkbook = {
   tables: ParsedTable[];
 };

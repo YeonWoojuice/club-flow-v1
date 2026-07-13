@@ -12,12 +12,17 @@ import com.clubflow.backend.club.dto.CreateClubRequest;
 import com.clubflow.backend.common.ConflictException;
 import com.clubflow.backend.common.ForbiddenException;
 import com.clubflow.backend.common.InvalidRequestException;
+import com.clubflow.backend.common.NotFoundException;
 import com.clubflow.backend.generation.Generation;
 import com.clubflow.backend.generation.GenerationRepository;
 import com.clubflow.backend.generation.GenerationService;
+import com.clubflow.backend.generation.GenerationStatus;
 import com.clubflow.backend.generation.dto.CreateGenerationRequest;
 import com.clubflow.backend.generation.dto.GenerationResponse;
+import com.clubflow.backend.generation.dto.UpdateGenerationRequest;
+import com.clubflow.backend.member.dto.ChangeGenerationMemberDuesStatusRequest;
 import com.clubflow.backend.member.dto.ChangeGenerationMemberStatusRequest;
+import com.clubflow.backend.member.dto.GenerationMemberResponse;
 import com.clubflow.backend.member.dto.GenerationMemberStatusHistoryResponse;
 import com.clubflow.backend.person.Person;
 import com.clubflow.backend.person.PersonRepository;
@@ -162,6 +167,96 @@ class GenerationMemberStatusIntegrationTests {
         )).isInstanceOf(ForbiddenException.class);
     }
 
+    @Test
+    void 회비_상태를_변경하면_변경한_운영진과_시간이_저장된다() {
+        TestData data = prepareMember();
+
+        GenerationMemberResponse response = generationMemberService.changeDuesStatus(
+                data.googleSub(),
+                data.member().getId(),
+                new ChangeGenerationMemberDuesStatusRequest(GenerationMemberDuesStatus.PAID)
+        );
+
+        GenerationMember saved = generationMemberRepository.findById(data.member().getId()).orElseThrow();
+        assertThat(saved.getDuesStatus()).isEqualTo(GenerationMemberDuesStatus.PAID);
+        assertThat(saved.getDuesStatusUpdatedAt()).isNotNull();
+        assertThat(response.duesStatus()).isEqualTo(GenerationMemberDuesStatus.PAID);
+        assertThat(response.duesStatusUpdatedAt()).isNotNull();
+        assertThat(response.duesStatusUpdatedByUserId()).isNotNull();
+        assertThat(response.duesStatusUpdatedByName()).isEqualTo("회장");
+    }
+
+    @Test
+    void 새_부원은_회계부원이_확인하기_전까지_회비_상태가_확인_필요이다() {
+        TestData data = prepareMember();
+
+        GenerationMemberResponse response = generationMemberService.list(
+                data.googleSub(), data.clubId(), data.generationId()
+        ).getFirst();
+
+        assertThat(response.duesStatus()).isEqualTo(GenerationMemberDuesStatus.UNKNOWN);
+        assertThat(response.duesStatusUpdatedAt()).isNull();
+        assertThat(response.duesStatusUpdatedByUserId()).isNull();
+        assertThat(response.duesStatusUpdatedByName()).isNull();
+    }
+
+    @Test
+    void 부원_목록은_선택한_학기의_부원만_반환한다() {
+        TestData data = prepareMember();
+        Generation generation = generationRepository.findById(data.generationId()).orElseThrow();
+        generationService.update(
+                data.googleSub(),
+                generation.getId(),
+                new UpdateGenerationRequest(
+                        generation.getName(),
+                        generation.getStartDate(),
+                        generation.getEndDate(),
+                        GenerationStatus.CLOSED
+                )
+        );
+        GenerationResponse nextGeneration = generationService.create(
+                data.googleSub(),
+                data.clubId(),
+                new CreateGenerationRequest(
+                        "2026-2 학기", LocalDate.of(2026, 7, 1), LocalDate.of(2026, 12, 31)
+                )
+        );
+        Club club = clubRepository.findById(data.clubId()).orElseThrow();
+        Person nextPerson = personRepository.save(Person.create(
+                club, "다음 학기 부원", "next@example.com", null, "20230002"
+        ));
+        generationMemberRepository.save(GenerationMember.createFromRetention(
+                generationRepository.findById(nextGeneration.id()).orElseThrow(), nextPerson
+        ));
+
+        List<GenerationMemberResponse> firstGenerationMembers = generationMemberService.list(
+                data.googleSub(), data.clubId(), data.generationId()
+        );
+
+        assertThat(firstGenerationMembers).hasSize(1);
+        assertThat(firstGenerationMembers.getFirst().name()).isEqualTo("김민수");
+        assertThat(firstGenerationMembers.getFirst().generationId()).isEqualTo(data.generationId());
+    }
+
+    @Test
+    void 다른_동아리의_학기로_부원_목록을_조회할_수_없다() {
+        TestData data = prepareMember();
+        ClubResponse otherClub = clubService.createClub(
+                data.googleSub(), new CreateClubRequest("다른 동아리", null)
+        );
+        GenerationResponse otherGeneration = generationService.create(
+                data.googleSub(),
+                otherClub.id(),
+                new CreateGenerationRequest(
+                        "다른 동아리 학기", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30)
+                )
+        );
+
+        assertThatThrownBy(() -> generationMemberService.list(
+                data.googleSub(), data.clubId(), otherGeneration.id()
+        )).isInstanceOf(NotFoundException.class);
+    }
+
     private TestData prepareMember() {
         String googleSub = "member-status-owner";
         userService.synchronizeGoogleUser(googleSub, "owner@example.com", "회장", null);
@@ -185,9 +280,14 @@ class GenerationMemberStatusIntegrationTests {
         GenerationMember member = generationMemberRepository.save(
                 GenerationMember.createFromAcceptedApplication(generation, person)
         );
-        return new TestData(googleSub, member);
+        return new TestData(googleSub, clubResponse.id(), generationResponse.id(), member);
     }
 
-    private record TestData(String googleSub, GenerationMember member) {
+    private record TestData(
+            String googleSub,
+            java.util.UUID clubId,
+            java.util.UUID generationId,
+            GenerationMember member
+    ) {
     }
 }

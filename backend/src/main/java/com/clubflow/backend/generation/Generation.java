@@ -84,7 +84,7 @@ public class Generation {
 
     public void update(String name, LocalDate startDate, LocalDate endDate, GenerationStatus targetStatus) {
         if (status == GenerationStatus.CLOSED && targetStatus != GenerationStatus.CLOSED) {
-            throw new ConflictException("종료된 학기는 다시 활성화할 수 없습니다.");
+            throw new ConflictException("종료된 학기는 학기 활성화 기능으로 전환해 주세요.");
         }
         this.name = name.trim();
         this.startDate = startDate;
@@ -93,6 +93,25 @@ public class Generation {
             this.closedAt = Instant.now();
         }
         this.status = targetStatus;
+        this.updatedAt = Instant.now();
+    }
+
+    public void close() {
+        if (status == GenerationStatus.CLOSED) {
+            return;
+        }
+        Instant now = Instant.now();
+        this.status = GenerationStatus.CLOSED;
+        this.closedAt = now;
+        this.updatedAt = now;
+    }
+
+    public void activate() {
+        if (status == GenerationStatus.ACTIVE) {
+            throw new ConflictException("이미 활성 상태인 학기입니다.");
+        }
+        this.status = GenerationStatus.ACTIVE;
+        this.closedAt = null;
         this.updatedAt = Instant.now();
     }
 

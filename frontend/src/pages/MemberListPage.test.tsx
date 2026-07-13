@@ -7,20 +7,26 @@ import type { GenerationMember } from "../types/member";
 import { MemberListPage } from "./MemberListPage";
 
 const {
+  listGenerations,
   listMembers,
+  changeGenerationMemberDuesStatus,
   changeGenerationMemberStatus,
   listGenerationMemberStatusHistory,
 } = vi.hoisted(() => ({
+  listGenerations: vi.fn(),
   listMembers: vi.fn(),
+  changeGenerationMemberDuesStatus: vi.fn(),
   changeGenerationMemberStatus: vi.fn(),
   listGenerationMemberStatusHistory: vi.fn(),
 }));
 
 vi.mock("../api/members", () => ({
   listMembers,
+  changeGenerationMemberDuesStatus,
   changeGenerationMemberStatus,
   listGenerationMemberStatusHistory,
 }));
+vi.mock("../api/generations", () => ({ listGenerations }));
 vi.mock("../components/AppLayout", () => ({
   AppLayout: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
@@ -36,6 +42,10 @@ const activeMember: GenerationMember = {
   studentNumber: "20260001",
   joinedSource: "APPLICATION_ACCEPT",
   status: "ACTIVE",
+  duesStatus: "UNKNOWN",
+  duesStatusUpdatedAt: null,
+  duesStatusUpdatedByUserId: null,
+  duesStatusUpdatedByName: null,
   createdAt: "2026-07-01T00:00:00Z",
 };
 
@@ -52,9 +62,37 @@ function renderPage() {
 describe("MemberListPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    listGenerations.mockResolvedValue([
+      { id: "generation-1", name: "26-1", status: "ACTIVE" },
+      { id: "generation-old", name: "25-2", status: "CLOSED" },
+    ]);
     listMembers.mockResolvedValue([activeMember]);
     listGenerationMemberStatusHistory.mockResolvedValue([]);
     changeGenerationMemberStatus.mockResolvedValue({ ...activeMember, status: "INACTIVE" });
+    changeGenerationMemberDuesStatus.mockResolvedValue({
+      ...activeMember,
+      duesStatus: "PAID",
+      duesStatusUpdatedAt: "2026-07-13T08:00:00Z",
+      duesStatusUpdatedByUserId: "user-1",
+      duesStatusUpdatedByName: "회계 운영진",
+    });
+  });
+
+  it("활성 학기 부원만 불러오고 학기를 바꾸면 해당 학기 부원을 다시 조회한다", async () => {
+    renderPage();
+
+    await waitFor(() => expect(listMembers).toHaveBeenCalledWith("club-1", "generation-1"));
+    fireEvent.change(screen.getByLabelText("조회할 학기"), { target: { value: "generation-old" } });
+    await waitFor(() => expect(listMembers).toHaveBeenCalledWith("club-1", "generation-old"));
+  });
+
+  it("회계 부원이 회비 확인 상태를 납부로 변경한다", async () => {
+    renderPage();
+
+    fireEvent.change(await screen.findByLabelText("김부원 회비 상태"), { target: { value: "PAID" } });
+
+    await waitFor(() => expect(changeGenerationMemberDuesStatus).toHaveBeenCalledWith("member-1", "PAID"));
+    expect(await screen.findByText(/회계 운영진/)).toBeInTheDocument();
   });
 
   it("활동 중 부원을 비활동으로 변경하고 해당 행을 갱신한다", async () => {

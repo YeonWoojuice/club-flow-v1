@@ -42,6 +42,15 @@ class GenerationMemberTest {
                 .hasMessage("탈퇴한 부원의 상태는 변경할 수 없습니다.");
     }
 
+    @Test
+    void 새_부원의_회비_상태는_확인_필요로_시작한다() {
+        GenerationMember member = createMember();
+
+        assertThat(member.getDuesStatus()).isEqualTo(GenerationMemberDuesStatus.UNKNOWN);
+        assertThat(member.getDuesStatusUpdatedAt()).isNull();
+        assertThat(member.getDuesStatusUpdatedBy()).isNull();
+    }
+
     private GenerationMember createMember() {
         User user = User.create("member-status-test", "owner@example.com", "회장", null);
         Club club = Club.create("테스트 동아리", null, user);

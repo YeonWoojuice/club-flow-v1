@@ -22,3 +22,9 @@ export function updateGeneration(generationId: string, input: UpdateGenerationIn
     body: JSON.stringify(input),
   });
 }
+
+export function activateGeneration(generationId: string) {
+  return apiRequest<Generation>(`/api/generations/${generationId}/activate`, {
+    method: "POST",
+  });
+}

@@ -4,6 +4,8 @@ import com.clubflow.backend.club.ClubAccessService;
 import com.clubflow.backend.common.InvalidRequestException;
 import com.clubflow.backend.common.NotFoundException;
 import com.clubflow.backend.generation.Generation;
+import com.clubflow.backend.generation.GenerationRepository;
+import com.clubflow.backend.member.dto.ChangeGenerationMemberDuesStatusRequest;
 import com.clubflow.backend.member.dto.ChangeGenerationMemberStatusRequest;
 import com.clubflow.backend.member.dto.GenerationMemberResponse;
 import com.clubflow.backend.member.dto.GenerationMemberStatusHistoryResponse;
@@ -24,17 +26,20 @@ public class GenerationMemberService {
     private final GenerationMemberStatusHistoryRepository statusHistoryRepository;
     private final ClubAccessService clubAccessService;
     private final UserService userService;
+    private final GenerationRepository generationRepository;
 
     public GenerationMemberService(
             GenerationMemberRepository generationMemberRepository,
             GenerationMemberStatusHistoryRepository statusHistoryRepository,
             ClubAccessService clubAccessService,
-            UserService userService
+            UserService userService,
+            GenerationRepository generationRepository
     ) {
         this.generationMemberRepository = generationMemberRepository;
         this.statusHistoryRepository = statusHistoryRepository;
         this.clubAccessService = clubAccessService;
         this.userService = userService;
+        this.generationRepository = generationRepository;
     }
 
     @Transactional
@@ -48,12 +53,29 @@ public class GenerationMemberService {
                 ));
     }
 
-    public List<GenerationMemberResponse> list(String googleSub, UUID clubId) {
+    public List<GenerationMemberResponse> list(String googleSub, UUID clubId, UUID generationId) {
         clubAccessService.requireAccessibleClub(googleSub, clubId);
-        return generationMemberRepository.findAllByClubId(clubId)
+        generationRepository.findByIdAndClubId(generationId, clubId)
+                .orElseThrow(() -> new NotFoundException("해당 동아리의 학기를 찾을 수 없습니다."));
+        return generationMemberRepository.findAllByGenerationIdWithPerson(generationId)
                 .stream()
                 .map(GenerationMemberResponse::from)
                 .toList();
+    }
+
+    @Transactional
+    public GenerationMemberResponse changeDuesStatus(
+            String googleSub,
+            UUID memberId,
+            ChangeGenerationMemberDuesStatusRequest request
+    ) {
+        GenerationMember member = generationMemberRepository.findByIdForUpdate(memberId)
+                .orElseThrow(() -> new NotFoundException("부원 정보를 찾을 수 없습니다."));
+        clubAccessService.requireAccessibleClub(googleSub, member.getGeneration().getClub().getId());
+
+        User changedBy = userService.getByGoogleSub(googleSub);
+        member.changeDuesStatus(request.duesStatus(), changedBy);
+        return GenerationMemberResponse.from(member);
     }
 
     @Transactional

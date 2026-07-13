@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useParams } from "react-router-dom";
-import { createGeneration, listGenerations, updateGeneration } from "../api/generations";
+import { activateGeneration, createGeneration, listGenerations, updateGeneration } from "../api/generations";
 import { apiErrorMessage } from "../api/http";
 import { AppLayout } from "../components/AppLayout";
 import type { Generation, GenerationStatus } from "../types/generation";
@@ -29,6 +29,7 @@ export function GenerationPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editState, setEditState] = useState<EditState>({ name: "", startDate: "", endDate: "", status: "ACTIVE" });
   const [editSubmitting, setEditSubmitting] = useState(false);
+  const [activatingId, setActivatingId] = useState<string | null>(null);
 
   const fetchGenerations = useCallback(() => {
     listGenerations(clubId)
@@ -96,7 +97,7 @@ export function GenerationPage() {
 
   const handleClose = async (generation: Generation) => {
     const confirmed = window.confirm(
-      `'${generation.name}' 학기를 종료할까요?\n종료된 학기는 다시 활성화할 수 없습니다.`,
+      `'${generation.name}' 학기를 종료할까요?\n필요하면 나중에 다시 활성화할 수 있습니다.`,
     );
     if (!confirmed) return;
     setError("");
@@ -110,6 +111,24 @@ export function GenerationPage() {
       load();
     } catch (requestError) {
       setError(apiErrorMessage(requestError, "학기를 종료하지 못했습니다."));
+    }
+  };
+
+  const handleActivate = async (generation: Generation) => {
+    const currentActive = generations.find(item => item.status === "ACTIVE");
+    const message = currentActive
+      ? `'${generation.name}' 학기를 활성화할까요?\n현재 활성 학기 '${currentActive.name}'은 자동으로 종료됩니다.`
+      : `'${generation.name}' 학기를 활성화할까요?`;
+    if (!window.confirm(message)) return;
+    setActivatingId(generation.id);
+    setError("");
+    try {
+      await activateGeneration(generation.id);
+      load();
+    } catch (requestError) {
+      setError(apiErrorMessage(requestError, "학기를 활성화하지 못했습니다."));
+    } finally {
+      setActivatingId(null);
     }
   };
 
@@ -214,7 +233,7 @@ export function GenerationPage() {
               {editingId === generation.id ? (
                 // Inline edit form
                 <form onSubmit={event => handleEdit(event, generation)} className="grid gap-4">
-                  <div className="grid gap-4 sm:grid-cols-[1fr_1fr_1fr_160px]">
+                  <div className="grid gap-4 sm:grid-cols-3">
                     <label className="grid gap-1.5 text-xs font-bold">
                       학기 이름
                       <input
@@ -244,17 +263,6 @@ export function GenerationPage() {
                         onChange={event => setEditState(prev => ({ ...prev, endDate: event.target.value }))}
                         required
                       />
-                    </label>
-                    <label className="grid gap-1.5 text-xs font-bold">
-                      상태
-                      <select
-                        className="control"
-                        value={editState.status}
-                        onChange={event => setEditState(prev => ({ ...prev, status: event.target.value as GenerationStatus }))}
-                      >
-                        <option value="ACTIVE">활성</option>
-                        <option value="CLOSED">종료</option>
-                      </select>
                     </label>
                   </div>
                   <div className="flex gap-2">
@@ -309,6 +317,16 @@ export function GenerationPage() {
                         className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-bold text-[var(--danger)] transition-colors hover:border-[var(--danger)] hover:bg-[var(--danger-soft)]"
                       >
                         학기 종료
+                      </button>
+                    )}
+                    {generation.status === "CLOSED" && (
+                      <button
+                        type="button"
+                        disabled={activatingId !== null}
+                        onClick={() => void handleActivate(generation)}
+                        className="rounded-lg border border-[var(--success)] px-3 py-1.5 text-xs font-bold text-[var(--success)] transition-colors hover:bg-[var(--success-soft)] disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {activatingId === generation.id ? "활성화 중..." : "다시 활성화"}
                       </button>
                     )}
                   </div>

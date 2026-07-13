@@ -20,6 +20,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/clubs/{clubId}/application-import/sources/{sourceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["update_1"];
+        post?: never;
+        delete: operations["delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/staff-invitations/{invitationId}/reject": {
         parameters: {
             query?: never;
@@ -46,6 +62,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["accept"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/generations/{generationId}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["activate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -164,6 +196,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/clubs/{clubId}/application-import/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_2"];
+        put?: never;
+        post: operations["create_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/clubs/{clubId}/application-import/preview": {
         parameters: {
             query?: never;
@@ -210,6 +258,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["changeStatus"];
+        trace?: never;
+    };
+    "/api/generation-members/{memberId}/dues-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["changeDuesStatus"];
         trace?: never;
     };
     "/api/clubs/{clubId}/staff/{staffId}/role": {
@@ -363,7 +427,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_2"];
+        get: operations["list_3"];
         put?: never;
         post?: never;
         delete?: never;
@@ -395,7 +459,23 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_3"];
+        get: operations["list_4"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/clubs/{clubId}/application-import/sources/{sourceId}/table": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["readLatest"];
         put?: never;
         post?: never;
         delete?: never;
@@ -551,6 +631,46 @@ export interface components {
             /** Format: date-time */
             closedAt?: string;
         };
+        ApplicationImportSourceMappingRequest: {
+            nameHeader: string;
+            emailHeader: string;
+            studentNumberHeader: string;
+            phoneHeader?: string;
+            submittedAtHeader?: string;
+        };
+        UpsertApplicationImportSourceRequest: {
+            displayName: string;
+            spreadsheetId: string;
+            /** Format: int64 */
+            sheetId: number;
+            sheetTitle: string;
+            headers: string[];
+            mapping: components["schemas"]["ApplicationImportSourceMappingRequest"];
+        };
+        ApplicationImportSourceMappingResponse: {
+            nameHeader?: string;
+            emailHeader?: string;
+            studentNumberHeader?: string;
+            phoneHeader?: string;
+            submittedAtHeader?: string;
+        };
+        ApplicationImportSourceResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            clubId?: string;
+            displayName?: string;
+            spreadsheetId?: string;
+            /** Format: int64 */
+            sheetId?: number;
+            sheetTitle?: string;
+            mapping?: components["schemas"]["ApplicationImportSourceMappingResponse"];
+            headerFingerprint?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
         ClubStaffInvitationResponse: {
             /** Format: uuid */
             id?: string;
@@ -651,6 +771,8 @@ export interface components {
             message?: string;
         };
         ParsedTableResponse: {
+            /** Format: int64 */
+            sheetId?: number;
             name?: string;
             headers?: string[];
             rows?: string[][];
@@ -805,8 +927,19 @@ export interface components {
             joinedSource?: "APPLICATION_ACCEPT" | "MANUAL" | "RETENTION";
             /** @enum {string} */
             status?: "ACTIVE" | "INACTIVE" | "WITHDRAWN";
+            /** @enum {string} */
+            duesStatus?: "UNKNOWN" | "UNPAID" | "PAID" | "EXEMPT";
+            /** Format: date-time */
+            duesStatusUpdatedAt?: string;
+            /** Format: uuid */
+            duesStatusUpdatedByUserId?: string;
+            duesStatusUpdatedByName?: string;
             /** Format: date-time */
             createdAt?: string;
+        };
+        ChangeGenerationMemberDuesStatusRequest: {
+            /** @enum {string} */
+            duesStatus: "UNKNOWN" | "UNPAID" | "PAID" | "EXEMPT";
         };
         ChangeClubStaffRoleRequest: {
             /** @enum {string} */
@@ -855,6 +988,10 @@ export interface components {
             sourceType?: "MANUAL" | "GOOGLE_FORM";
             /** Format: date-time */
             submittedAt?: string;
+        };
+        ApplicationImportSourceTableResponse: {
+            source?: components["schemas"]["ApplicationImportSourceResponse"];
+            table?: components["schemas"]["ParsedTableResponse"];
         };
         CurrentUserResponse: {
             /** Format: uuid */
@@ -906,6 +1043,126 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["GenerationResponse"];
                 };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clubId: string;
+                sourceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertApplicationImportSourceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApplicationImportSourceResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clubId: string;
+                sourceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Bad Request */
             400: {
@@ -1021,6 +1278,64 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ClubStaffResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    activate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                generationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GenerationResponse"];
                 };
             };
             /** @description Bad Request */
@@ -1668,6 +1983,126 @@ export interface operations {
             };
         };
     };
+    list_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clubId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApplicationImportSourceResponse"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clubId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertApplicationImportSourceRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApplicationImportSourceResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     preview_1: {
         parameters: {
             query?: never;
@@ -1804,6 +2239,68 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ChangeGenerationMemberStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GenerationMemberResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    changeDuesStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeGenerationMemberDuesStatusRequest"];
             };
         };
         responses: {
@@ -2381,9 +2878,11 @@ export interface operations {
             };
         };
     };
-    list_2: {
+    list_3: {
         parameters: {
-            query?: never;
+            query: {
+                generationId: string;
+            };
             header?: never;
             path: {
                 clubId: string;
@@ -2498,7 +2997,7 @@ export interface operations {
             };
         };
     };
-    list_3: {
+    list_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -2516,6 +3015,65 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApplicationSummaryResponse"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    readLatest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clubId: string;
+                sourceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApplicationImportSourceTableResponse"];
                 };
             };
             /** @description Bad Request */

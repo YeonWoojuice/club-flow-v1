@@ -1,6 +1,7 @@
 package com.clubflow.backend.member.dto;
 
 import com.clubflow.backend.member.GenerationMember;
+import com.clubflow.backend.member.GenerationMemberDuesStatus;
 import com.clubflow.backend.member.GenerationMemberStatus;
 import com.clubflow.backend.member.MemberJoinedSource;
 
@@ -18,6 +19,10 @@ public record GenerationMemberResponse(
         String studentNumber,
         MemberJoinedSource joinedSource,
         GenerationMemberStatus status,
+        GenerationMemberDuesStatus duesStatus,
+        Instant duesStatusUpdatedAt,
+        UUID duesStatusUpdatedByUserId,
+        String duesStatusUpdatedByName,
         Instant createdAt
 ) {
     public static GenerationMemberResponse from(GenerationMember member) {
@@ -32,6 +37,10 @@ public record GenerationMemberResponse(
                 member.getPerson().getStudentNumber(),
                 member.getJoinedSource(),
                 member.getStatus(),
+                member.getDuesStatus(),
+                member.getDuesStatusUpdatedAt(),
+                member.getDuesStatusUpdatedBy() == null ? null : member.getDuesStatusUpdatedBy().getId(),
+                member.getDuesStatusUpdatedBy() == null ? null : member.getDuesStatusUpdatedBy().getName(),
                 member.getCreatedAt()
         );
     }

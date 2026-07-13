@@ -9,6 +9,8 @@ import com.clubflow.backend.generation.dto.GenerationResponse;
 import com.clubflow.backend.generation.dto.UpdateGenerationRequest;
 import com.clubflow.backend.user.User;
 import com.clubflow.backend.user.UserService;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -69,6 +71,37 @@ public class GenerationService {
         clubAccessService.requireAccessibleClub(googleSub, generation.getClub().getId());
         generation.update(request.name(), request.startDate(), request.endDate(), request.status());
         return GenerationResponse.from(generation);
+    }
+
+    @Transactional
+    public GenerationResponse activate(String googleSub, UUID generationId) {
+        Generation requestedGeneration = generationRepository.findById(generationId)
+                .orElseThrow(() -> new NotFoundException("학기를 찾을 수 없습니다."));
+        UUID clubId = requestedGeneration.getClub().getId();
+        clubAccessService.requireAccessibleClub(googleSub, clubId);
+
+        try {
+            List<Generation> generations = generationRepository.findAllForUpdateByClubId(clubId);
+            Generation target = generations.stream()
+                    .filter(generation -> generationId.equals(generation.getId()))
+                    .findFirst()
+                    .orElseThrow(() -> new NotFoundException("학기를 찾을 수 없습니다."));
+
+            if (target.getStatus() == GenerationStatus.ACTIVE) {
+                throw new ConflictException("이미 활성 상태인 학기입니다.");
+            }
+
+            generations.stream()
+                    .filter(generation -> generation.getStatus() == GenerationStatus.ACTIVE)
+                    .forEach(Generation::close);
+            generationRepository.flush();
+
+            target.activate();
+            generationRepository.flush();
+            return GenerationResponse.from(target);
+        } catch (DataIntegrityViolationException | PessimisticLockingFailureException exception) {
+            throw new ConflictException("다른 운영진이 활성 학기를 변경했습니다. 새로고침 후 다시 시도해 주세요.");
+        }
     }
 
     public Generation requireGenerationInClub(UUID generationId, UUID clubId) {

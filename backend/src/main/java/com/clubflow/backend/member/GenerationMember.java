@@ -3,6 +3,7 @@ package com.clubflow.backend.member;
 import com.clubflow.backend.generation.Generation;
 import com.clubflow.backend.common.ConflictException;
 import com.clubflow.backend.person.Person;
+import com.clubflow.backend.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -42,6 +43,17 @@ public class GenerationMember {
     @Column(nullable = false, length = 20)
     private GenerationMemberStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "dues_status", nullable = false, length = 20)
+    private GenerationMemberDuesStatus duesStatus;
+
+    @Column(name = "dues_status_updated_at")
+    private Instant duesStatusUpdatedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "dues_status_updated_by")
+    private User duesStatusUpdatedBy;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -62,6 +74,7 @@ public class GenerationMember {
         this.person = person;
         this.joinedSource = joinedSource;
         this.status = status;
+        this.duesStatus = GenerationMemberDuesStatus.UNKNOWN;
         this.createdAt = now;
         this.updatedAt = now;
     }
@@ -96,6 +109,17 @@ public class GenerationMember {
         return true;
     }
 
+    public boolean changeDuesStatus(GenerationMemberDuesStatus targetStatus, User changedBy) {
+        if (duesStatus == targetStatus) {
+            return false;
+        }
+        this.duesStatus = targetStatus;
+        this.duesStatusUpdatedAt = Instant.now();
+        this.duesStatusUpdatedBy = changedBy;
+        this.updatedAt = this.duesStatusUpdatedAt;
+        return true;
+    }
+
     public UUID getId() {
         return id;
     }
@@ -114,6 +138,18 @@ public class GenerationMember {
 
     public GenerationMemberStatus getStatus() {
         return status;
+    }
+
+    public GenerationMemberDuesStatus getDuesStatus() {
+        return duesStatus;
+    }
+
+    public Instant getDuesStatusUpdatedAt() {
+        return duesStatusUpdatedAt;
+    }
+
+    public User getDuesStatusUpdatedBy() {
+        return duesStatusUpdatedBy;
     }
 
     public Instant getCreatedAt() {

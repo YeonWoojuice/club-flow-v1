@@ -1,6 +1,7 @@
 package com.clubflow.backend.member;
 
 import com.clubflow.backend.member.dto.ChangeGenerationMemberStatusRequest;
+import com.clubflow.backend.member.dto.ChangeGenerationMemberDuesStatusRequest;
 import com.clubflow.backend.member.dto.GenerationMemberResponse;
 import com.clubflow.backend.member.dto.GenerationMemberStatusHistoryResponse;
 import jakarta.validation.Valid;
@@ -33,6 +34,15 @@ public class GenerationMemberStatusController {
             @Valid @RequestBody ChangeGenerationMemberStatusRequest request
     ) {
         return generationMemberService.changeStatus(oidcUser.getSubject(), memberId, request);
+    }
+
+    @PatchMapping("/dues-status")
+    public GenerationMemberResponse changeDuesStatus(
+            @AuthenticationPrincipal OidcUser oidcUser,
+            @PathVariable UUID memberId,
+            @Valid @RequestBody ChangeGenerationMemberDuesStatusRequest request
+    ) {
+        return generationMemberService.changeDuesStatus(oidcUser.getSubject(), memberId, request);
     }
 
     @GetMapping("/status-history")

@@ -1,18 +1,22 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { useParams } from "react-router-dom";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import {
+  changeGenerationMemberDuesStatus,
   changeGenerationMemberStatus,
   listGenerationMemberStatusHistory,
   listMembers,
 } from "../api/members";
+import { listGenerations } from "../api/generations";
 import { apiErrorMessage } from "../api/http";
 import { AppLayout } from "../components/AppLayout";
 import type {
   GenerationMember,
+  GenerationMemberDuesStatus,
   GenerationMemberStatus,
   GenerationMemberStatusHistory,
   MemberJoinedSource,
 } from "../types/member";
+import type { Generation } from "../types/generation";
 
 const sourceLabel: Record<MemberJoinedSource, string> = {
   APPLICATION_ACCEPT: "지원 합격",
@@ -30,6 +34,13 @@ const statusActionLabel: Record<GenerationMemberStatus, string> = {
   ACTIVE: "활동 중으로 변경",
   INACTIVE: "비활동으로 변경",
   WITHDRAWN: "탈퇴 처리",
+};
+
+const duesStatusLabel: Record<GenerationMemberDuesStatus, string> = {
+  UNKNOWN: "확인 필요",
+  UNPAID: "미납",
+  PAID: "납부",
+  EXEMPT: "면제",
 };
 
 function StatusBadge({ status }: { status: GenerationMemberStatus }) {
@@ -80,6 +91,8 @@ function MemberRow({ member, onUpdated }: MemberRowProps) {
   const [history, setHistory] = useState<GenerationMemberStatusHistory[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
+  const [duesSubmitting, setDuesSubmitting] = useState(false);
+  const [duesError, setDuesError] = useState("");
 
   const formId = `member-status-form-${member.id}`;
   const historyId = `member-status-history-${member.id}`;
@@ -142,6 +155,18 @@ function MemberRow({ member, onUpdated }: MemberRowProps) {
     setFormOpen(open => !open);
   }
 
+  async function handleDuesStatusChange(duesStatus: GenerationMemberDuesStatus) {
+    setDuesSubmitting(true);
+    setDuesError("");
+    try {
+      onUpdated(await changeGenerationMemberDuesStatus(member.id, duesStatus));
+    } catch (requestError) {
+      setDuesError(apiErrorMessage(requestError, "회비 상태를 변경하지 못했습니다."));
+    } finally {
+      setDuesSubmitting(false);
+    }
+  }
+
   return (
     <>
       <tr className="border-t border-[var(--border-subtle)] hover:bg-[var(--panel-muted)]">
@@ -153,6 +178,28 @@ function MemberRow({ member, onUpdated }: MemberRowProps) {
         <td className="px-5 py-3.5 text-xs text-[var(--text-secondary)]">{sourceLabel[member.joinedSource]}</td>
         <td className="px-5 py-3.5">
           <StatusBadge status={member.status} />
+        </td>
+        <td className="px-5 py-3.5">
+          <label className="grid min-w-24 gap-1 text-[10px] font-bold text-[var(--text-secondary)]">
+            <span className="sr-only">{member.name} 회비 상태</span>
+            <select
+              aria-label={`${member.name} 회비 상태`}
+              value={member.duesStatus}
+              disabled={duesSubmitting}
+              onChange={event => void handleDuesStatusChange(event.target.value as GenerationMemberDuesStatus)}
+              className="rounded-lg border border-[var(--border-subtle)] bg-white px-2 py-1.5 text-xs font-bold text-[var(--text-primary)] disabled:opacity-50"
+            >
+              {Object.entries(duesStatusLabel).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </label>
+          {member.duesStatusUpdatedByName && member.duesStatusUpdatedAt && (
+            <p className="mt-1 text-[10px] text-[var(--text-secondary)]">
+              {member.duesStatusUpdatedByName} · {formatChangedAt(member.duesStatusUpdatedAt)}
+            </p>
+          )}
+          {duesError && <p role="alert" className="mt-1 text-[10px] font-bold text-[var(--danger)]">{duesError}</p>}
         </td>
         <td className="px-5 py-3.5">
           <div className="flex flex-wrap gap-2">
@@ -181,7 +228,7 @@ function MemberRow({ member, onUpdated }: MemberRowProps) {
       </tr>
       {(formOpen || historyOpen) && (
         <tr className="border-t border-[var(--border-subtle)] bg-[var(--panel-muted)]">
-          <td colSpan={5} className="px-5 py-4">
+          <td colSpan={6} className="px-5 py-4">
             <div className="grid gap-4 lg:grid-cols-2">
               {formOpen && member.status !== "WITHDRAWN" && (
                 <form id={formId} onSubmit={handleSubmit} className="rounded-xl border border-[var(--border-subtle)] bg-white p-4">
@@ -289,16 +336,66 @@ function MemberRow({ member, onUpdated }: MemberRowProps) {
 
 export function MemberListPage() {
   const { clubId = "" } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [requestedGenerationId] = useState(() => searchParams.get("generationId"));
+  const initializedClubId = useRef<string | null>(null);
+  const [generations, setGenerations] = useState<Generation[]>([]);
+  const [generationId, setGenerationId] = useState("");
   const [members, setMembers] = useState<GenerationMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    listMembers(clubId)
+    if (initializedClubId.current === clubId) return;
+    initializedClubId.current = clubId;
+    setLoading(true);
+    setError("");
+    listGenerations(clubId)
+      .then(items => {
+        setGenerations(items);
+        const selected = items.find(item => item.id === requestedGenerationId)
+          ?? items.find(item => item.status === "ACTIVE")
+          ?? items[0];
+        const nextId = selected?.id ?? "";
+        setGenerationId(nextId);
+        if (nextId && requestedGenerationId !== nextId) {
+          setSearchParams(current => {
+            const next = new URLSearchParams(current);
+            next.set("generationId", nextId);
+            return next;
+          }, { replace: true });
+        }
+        if (!nextId) {
+          setMembers([]);
+          setLoading(false);
+          return;
+        }
+        listMembers(clubId, nextId)
+          .then(setMembers)
+          .catch(requestError => setError(apiErrorMessage(requestError, "부원 목록을 불러오지 못했습니다.")))
+          .finally(() => setLoading(false));
+      })
+      .catch(requestError => {
+        initializedClubId.current = null;
+        setError(apiErrorMessage(requestError, "학기 목록을 불러오지 못했습니다."));
+        setLoading(false);
+      });
+  }, [clubId, requestedGenerationId, setSearchParams]);
+
+  function selectGeneration(nextId: string) {
+    setGenerationId(nextId);
+    setLoading(true);
+    setError("");
+    setSearchParams(current => {
+      const next = new URLSearchParams(current);
+      next.set("generationId", nextId);
+      return next;
+    }, { replace: true });
+    listMembers(clubId, nextId)
       .then(setMembers)
       .catch(requestError => setError(apiErrorMessage(requestError, "부원 목록을 불러오지 못했습니다.")))
       .finally(() => setLoading(false));
-  }, [clubId]);
+  }
 
   function handleMemberUpdated(updated: GenerationMember) {
     setMembers(current => current.map(member => member.id === updated.id ? updated : member));
@@ -312,6 +409,25 @@ export function MemberListPage() {
       </div>
 
       <div className="px-4 py-6 md:px-8">
+        <div className="mb-5 flex flex-col gap-2 rounded-xl border border-[var(--border-subtle)] bg-white p-4 sm:flex-row sm:items-end sm:justify-between">
+          <label className="grid max-w-sm flex-1 gap-1.5 text-xs font-bold text-[var(--text-primary)]">
+            조회할 학기
+            <select
+              className="control"
+              value={generationId}
+              onChange={event => selectGeneration(event.target.value)}
+              disabled={generations.length === 0}
+            >
+              {generations.length === 0 && <option value="">등록된 학기가 없습니다</option>}
+              {generations.map(generation => (
+                <option key={generation.id} value={generation.id}>
+                  {generation.name} {generation.status === "ACTIVE" ? "(활성)" : "(종료)"}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="text-xs text-[var(--text-secondary)]">선택한 학기의 부원과 회비 확인 상태만 표시합니다.</p>
+        </div>
         {loading && <p className="text-sm text-[var(--text-secondary)]">불러오는 중...</p>}
 
         {error && (
@@ -329,13 +445,14 @@ export function MemberListPage() {
 
         {!loading && !error && members.length > 0 && (
           <div className="overflow-x-auto rounded-xl border border-[var(--border-subtle)] bg-white">
-            <table className="w-full min-w-[720px] text-left">
+            <table className="w-full min-w-[860px] text-left">
               <thead>
                 <tr className="bg-[var(--panel-muted)]">
                   <th className="px-5 py-3 text-xs font-extrabold text-[var(--text-secondary)]">이름/이메일</th>
                   <th className="px-5 py-3 text-xs font-extrabold text-[var(--text-secondary)]">학기</th>
                   <th className="px-5 py-3 text-xs font-extrabold text-[var(--text-secondary)]">가입 경로</th>
                   <th className="px-5 py-3 text-xs font-extrabold text-[var(--text-secondary)]">상태</th>
+                  <th className="px-5 py-3 text-xs font-extrabold text-[var(--text-secondary)]">회비 확인</th>
                   <th className="px-5 py-3 text-xs font-extrabold text-[var(--text-secondary)]">관리</th>
                 </tr>
               </thead>

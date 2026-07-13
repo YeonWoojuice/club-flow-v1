@@ -2,11 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   applyApplicationImport,
+  createApplicationImportSource,
+  deleteApplicationImportSource,
   disconnectGoogleConnection,
   getGoogleAuthorizationUrl,
   getGoogleConnectionStatus,
+  listApplicationImportSources,
   previewApplicationImport,
   readApplicationGoogleSheet,
+  readApplicationImportSource,
+  updateApplicationImportSource,
 } from "../api/applicationImport";
 import { listGenerations } from "../api/generations";
 import { apiErrorMessage } from "../api/http";
@@ -15,6 +20,8 @@ import type {
   ApplicationImportPreview,
   ApplicationImportRowInput,
   ApplicationImportRowStatus,
+  ApplicationImportSource,
+  ApplicationImportSourceInput,
 } from "../types/applicationImport";
 import type { Generation } from "../types/generation";
 import type { ParsedTable, ParsedWorkbook } from "../types/retention";
@@ -52,6 +59,9 @@ export function ApplicationImportPage() {
   const [googleConnected, setGoogleConnected] = useState(false);
   const [googleEmail, setGoogleEmail] = useState<string | null>(null);
   const [spreadsheet, setSpreadsheet] = useState("");
+  const [sources, setSources] = useState<ApplicationImportSource[]>([]);
+  const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
+  const [sourceDisplayName, setSourceDisplayName] = useState("");
   const [workbook, setWorkbook] = useState<ParsedWorkbook | null>(null);
   const [tableIndex, setTableIndex] = useState(0);
   const [nameColumn, setNameColumn] = useState("");
@@ -63,6 +73,7 @@ export function ApplicationImportPage() {
   const [preview, setPreview] = useState<ApplicationImportPreview | null>(null);
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState<"connecting" | "disconnecting" | null>(null);
+  const [sourceBusy, setSourceBusy] = useState<string | null>(null);
   const [error, setError] = useState(() => googleCallbackResult === "error"
     ? "Google 계정을 연결하지 못했습니다. 권한 동의 여부와 테스트 사용자 등록을 확인해 주세요."
     : "");
@@ -74,12 +85,13 @@ export function ApplicationImportPage() {
   const activeGenerations = generations.filter(item => item.status === "ACTIVE");
 
   useEffect(() => {
-    Promise.all([listGenerations(clubId), getGoogleConnectionStatus()])
-      .then(([generationItems, connection]) => {
+    Promise.all([listGenerations(clubId), getGoogleConnectionStatus(), listApplicationImportSources(clubId)])
+      .then(([generationItems, connection, savedSources]) => {
         setGenerations(generationItems);
         setGenerationId(generationItems.find(item => item.status === "ACTIVE")?.id ?? "");
         setGoogleConnected(connection.connected);
         setGoogleEmail(connection.googleAccountEmail ?? null);
+        setSources(savedSources);
       })
       .catch(requestError => setError(apiErrorMessage(requestError, "초기 정보를 불러오지 못했습니다.")));
   }, [clubId]);
@@ -157,6 +169,104 @@ export function ApplicationImportPage() {
       setError(apiErrorMessage(requestError, "Google Sheet를 읽지 못했습니다."));
     } finally {
       setBusy(false);
+    }
+  };
+
+  const applySavedSource = (source: ApplicationImportSource, savedTable: ParsedTable) => {
+    const indexOf = (header: string | null | undefined) => header ? String(savedTable.headers.indexOf(header)) : "";
+    setSelectedSourceId(source.id);
+    setSourceDisplayName(source.displayName);
+    setSpreadsheet(source.spreadsheetId);
+    setWorkbook({ tables: [savedTable] });
+    setTableIndex(0);
+    setNameColumn(indexOf(source.mapping.nameHeader));
+    setEmailColumn(indexOf(source.mapping.emailHeader));
+    setStudentNumberColumn(indexOf(source.mapping.studentNumberHeader));
+    setPhoneColumn(indexOf(source.mapping.phoneHeader));
+    setSubmittedAtColumn(indexOf(source.mapping.submittedAtHeader));
+    setPreviewRows([]);
+    setPreview(null);
+  };
+
+  const loadSavedSource = async (source: ApplicationImportSource) => {
+    setSourceBusy(source.id);
+    setError("");
+    setSuccess("");
+    try {
+      const result = await readApplicationImportSource(clubId, source.id);
+      applySavedSource(result.source, result.table);
+      setSuccess(`'${source.displayName}'의 최신 응답을 불러왔습니다.`);
+    } catch (requestError) {
+      setError(apiErrorMessage(requestError, "저장된 Google Sheet를 읽지 못했습니다."));
+    } finally {
+      setSourceBusy(null);
+    }
+  };
+
+  const startSourceEdit = (source: ApplicationImportSource) => {
+    setSelectedSourceId(source.id);
+    setSourceDisplayName(source.displayName);
+    setSpreadsheet(source.spreadsheetId);
+    setWorkbook(null);
+    resetMapping();
+    setSuccess("Google Sheet를 다시 불러오고 열을 연결한 뒤 설정을 저장해 주세요.");
+  };
+
+  const removeSavedSource = async (source: ApplicationImportSource) => {
+    if (!window.confirm(`'${source.displayName}' 저장 설정을 삭제할까요?\n지원자 데이터는 삭제되지 않습니다.`)) return;
+    setSourceBusy(source.id);
+    setError("");
+    try {
+      await deleteApplicationImportSource(clubId, source.id);
+      setSources(current => current.filter(item => item.id !== source.id));
+      if (selectedSourceId === source.id) setSelectedSourceId(null);
+      setSuccess("저장된 가져오기 설정을 삭제했습니다.");
+    } catch (requestError) {
+      setError(apiErrorMessage(requestError, "저장된 설정을 삭제하지 못했습니다."));
+    } finally {
+      setSourceBusy(null);
+    }
+  };
+
+  const saveCurrentSource = async () => {
+    const spreadsheetId = spreadsheetIdFrom(spreadsheet);
+    if (!table || table.sheetId == null || !spreadsheetId || !sourceDisplayName.trim()) {
+      setError("설정 이름과 Google Sheet, Sheet 탭을 확인해 주세요.");
+      return;
+    }
+    if (nameColumn === "" || emailColumn === "" || studentNumberColumn === "") {
+      setError("이름, 이메일, 학번 열을 연결한 뒤 저장해 주세요.");
+      return;
+    }
+    const headerAt = (column: string) => column === "" ? null : table.headers[Number(column)] ?? null;
+    const input: ApplicationImportSourceInput = {
+      displayName: sourceDisplayName.trim(),
+      spreadsheetId,
+      sheetId: table.sheetId,
+      sheetTitle: table.name,
+      headers: table.headers,
+      mapping: {
+        nameHeader: headerAt(nameColumn) ?? "",
+        emailHeader: headerAt(emailColumn) ?? "",
+        studentNumberHeader: headerAt(studentNumberColumn) ?? "",
+        phoneHeader: headerAt(phoneColumn),
+        submittedAtHeader: headerAt(submittedAtColumn),
+      },
+    };
+    setSourceBusy(selectedSourceId ?? "new");
+    setError("");
+    try {
+      const saved = selectedSourceId
+        ? await updateApplicationImportSource(clubId, selectedSourceId, input)
+        : await createApplicationImportSource(clubId, input);
+      setSources(current => [...current.filter(item => item.id !== saved.id), saved]
+        .sort((left, right) => left.displayName.localeCompare(right.displayName, "ko")));
+      setSelectedSourceId(saved.id);
+      setSuccess(`'${saved.displayName}' 설정을 저장했습니다. 다음부터 최신 응답 확인 버튼을 사용할 수 있습니다.`);
+    } catch (requestError) {
+      setError(apiErrorMessage(requestError, "가져오기 설정을 저장하지 못했습니다."));
+    } finally {
+      setSourceBusy(null);
     }
   };
 
@@ -275,6 +385,40 @@ export function ApplicationImportPage() {
                   </button>
                 </div>
               </div>
+              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--panel-muted)] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-xs font-extrabold">저장된 Google Sheet</h3>
+                    <p className="mt-1 text-[11px] text-[var(--text-secondary)]">주소를 다시 붙여넣지 않고 최신 응답을 확인합니다.</p>
+                  </div>
+                </div>
+                {sources.length === 0 ? (
+                  <p className="mt-3 text-xs text-[var(--text-secondary)]">아직 저장한 설정이 없습니다. 아래에서 Sheet를 불러오고 열을 연결한 뒤 저장할 수 있습니다.</p>
+                ) : (
+                  <ul className="mt-3 grid gap-2">
+                    {sources.map(source => (
+                      <li key={source.id} className="flex flex-col gap-3 rounded-lg border border-[var(--border-subtle)] bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-xs font-extrabold">{source.displayName}</p>
+                          <p className="mt-1 text-[10px] text-[var(--text-secondary)]">탭: {source.sheetTitle}</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            disabled={sourceBusy !== null || busy}
+                            onClick={() => void loadSavedSource(source)}
+                            className="rounded-lg bg-[var(--navy)] px-3 py-2 text-xs font-bold text-white disabled:opacity-40"
+                          >
+                            {sourceBusy === source.id ? "확인 중..." : "최신 응답 확인"}
+                          </button>
+                          <button type="button" disabled={sourceBusy !== null} onClick={() => startSourceEdit(source)} className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-bold disabled:opacity-40">설정 수정</button>
+                          <button type="button" disabled={sourceBusy !== null} onClick={() => void removeSavedSource(source)} className="rounded-lg border border-[var(--danger)] px-3 py-2 text-xs font-bold text-[var(--danger)] disabled:opacity-40">삭제</button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <label className="grid flex-1 gap-1.5 text-xs font-bold">Google Sheet 주소 또는 ID
                   <input disabled={googleBusy !== null} className="control" value={spreadsheet} onChange={event => setSpreadsheet(event.target.value)} placeholder="https://docs.google.com/spreadsheets/d/..." />
@@ -310,6 +454,33 @@ export function ApplicationImportPage() {
               <ColumnSelect label="학번 (필수)" value={studentNumberColumn} headers={table.headers} onChange={setStudentNumberColumn} required />
               <ColumnSelect label="전화번호 (선택)" value={phoneColumn} headers={table.headers} onChange={setPhoneColumn} />
               <ColumnSelect label="응답 시간 (선택)" value={submittedAtColumn} headers={table.headers} onChange={setSubmittedAtColumn} />
+            </div>
+            <div className="mt-4 rounded-lg border border-[var(--border-subtle)] bg-[var(--panel-muted)] p-4">
+              <h3 className="text-xs font-extrabold">다음에도 한 번에 불러오기</h3>
+              <p className="mt-1 text-[11px] text-[var(--text-secondary)]">Sheet 주소, 탭, 열 연결 규칙만 저장합니다. 지원자 행과 Google 접근 권한은 저장 설정에 포함하지 않습니다.</p>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <label className="grid flex-1 gap-1 text-xs font-bold">설정 이름
+                  <input className="control" value={sourceDisplayName} onChange={event => setSourceDisplayName(event.target.value)} maxLength={100} placeholder="예: 2026-2 지원서" />
+                </label>
+                <button
+                  type="button"
+                  disabled={sourceBusy !== null}
+                  onClick={() => void saveCurrentSource()}
+                  className="self-end rounded-lg border border-[var(--navy)] px-4 py-2.5 text-xs font-bold text-[var(--navy)] disabled:opacity-40"
+                >
+                  {sourceBusy === (selectedSourceId ?? "new") ? "저장 중..." : selectedSourceId ? "저장 설정 수정" : "가져오기 설정 저장"}
+                </button>
+                {selectedSourceId && (
+                  <button
+                    type="button"
+                    disabled={sourceBusy !== null}
+                    onClick={() => { setSelectedSourceId(null); setSourceDisplayName(""); }}
+                    className="self-end rounded-lg px-3 py-2.5 text-xs font-bold text-[var(--text-secondary)] disabled:opacity-40"
+                  >
+                    새 설정으로 저장
+                  </button>
+                )}
+              </div>
             </div>
             <p className="mt-4 rounded-lg bg-[var(--panel-muted)] p-3 text-xs text-[var(--text-secondary)]">현재 선택에 따라 나머지 {questionColumnCount}개 열을 지원서 질문으로 자동 저장합니다.</p>
             <button type="button" disabled={busy || !generationId} onClick={() => void runPreview()} className="mt-5 rounded-lg bg-[var(--navy)] px-5 py-2.5 text-xs font-bold text-white disabled:opacity-40">{busy ? "확인하는 중..." : "중복 확인하고 미리보기"}</button>

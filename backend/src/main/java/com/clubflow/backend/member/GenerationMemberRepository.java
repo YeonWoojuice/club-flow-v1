@@ -29,7 +29,9 @@ public interface GenerationMemberRepository extends JpaRepository<GenerationMemb
             select member
             from GenerationMember member
             join fetch member.person person
+            left join fetch member.duesStatusUpdatedBy duesStatusUpdatedBy
             where member.generation.id = :generationId
+            order by person.name asc
             """)
     List<GenerationMember> findAllByGenerationIdWithPerson(@Param("generationId") UUID generationId);
 

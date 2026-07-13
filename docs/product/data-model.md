@@ -118,7 +118,8 @@ generations 1 ── N applications N ── 1 persons
 | closed_at | TIMESTAMPTZ | NULL 허용 |
 
 - 동아리별 `ACTIVE` 학기는 하나만 허용한다.
-- 종료된 학기는 다시 활성화하지 않는다.
+- 종료된 학기를 다시 활성화할 수 있다. 이때 기존 활성 학기는 같은 작업 안에서 종료한다.
+- 재활성화된 학기의 `closed_at`은 비우며, 종료 학기도 조회 대상으로 선택할 수 있다.
 
 ## persons
 
@@ -179,12 +180,17 @@ generations 1 ── N applications N ── 1 persons
 | person_id | UUID | FK → persons.id |
 | joined_source | VARCHAR(30) | APPLICATION_ACCEPT, MANUAL, RETENTION |
 | status | VARCHAR(20) | ACTIVE, INACTIVE, WITHDRAWN |
+| dues_status | VARCHAR(20) | UNKNOWN, UNPAID, PAID, EXEMPT |
+| dues_status_updated_at | TIMESTAMPTZ | NULL 허용 |
+| dues_status_updated_by_user_id | UUID | FK → users.id, NULL 허용 |
 | created_at | TIMESTAMPTZ | NOT NULL |
 | updated_at | TIMESTAMPTZ | NOT NULL |
 
 - `UNIQUE(generation_id, person_id)`로 같은 학기의 중복 부원을 방지한다.
 - 지원서를 합격 처리하면 `APPLICATION_ACCEPT/ACTIVE`로 생성한다.
 - 이전 학기 부원을 이월하면 `RETENTION/ACTIVE`로 생성한다.
+- 기존·신규 부원의 회비 상태는 `UNKNOWN`으로 시작하고 회계 담당 운영진이 직접 확인한다.
+- 회비 상태는 납부 금액이나 회계 거래가 아니라 해당 학기의 확인 결과만 나타낸다.
 - 동아리는 generation을 통해 판별하므로 중복 `club_id`를 저장하지 않는다.
 
 ## generation_member_status_histories
@@ -204,7 +210,25 @@ generations 1 ── N applications N ── 1 persons
 - 변경자와 변경 시간을 남겨 운영진이 상태 변경 경위를 확인할 수 있게 한다.
 - 같은 상태를 다시 요청하면 이력을 중복 생성하지 않는다.
 
+## application_import_sources
+
+| 컬럼 | 설명 |
+|---|---|
+| club_id | 설정을 공유하는 동아리 |
+| display_name | 운영진에게 보이는 설정 이름 |
+| spreadsheet_id | Google Sheet 문서 ID |
+| sheet_id | 이름이 바뀌어도 유지되는 Google 탭 ID |
+| sheet_title | 저장 당시 탭 이름 |
+| name/email/student_number_header | 필수 열 연결 |
+| phone/submitted_at_header | 선택 열 연결 |
+| header_fingerprint | 저장 당시 열 구조의 지문 |
+
+- OAuth 토큰과 Sheet 행은 저장하지 않는다.
+- 버튼을 누른 운영진 자신의 Google 연결 권한으로 최신 데이터를 읽는다.
+- 저장 이후 열 구조가 달라지면 자동으로 진행하지 않고 열 연결 재설정을 요구한다.
+- 저장된 설정은 자동 동기화가 아니라 최신 응답을 다시 읽기 위한 바로가기다.
+
 ## 외부 데이터 동기화
 
 Google Sheet 읽기 권한은 `google_connections`에 저장한다. 원본 파일과 Sheet 행은 별도로 보관하지 않는다.
-주기 동기화, 가져오기 이력, 저장된 열 연결 설정은 후속 범위다.
+주기 동기화와 가져오기 실행 이력은 후속 범위다.

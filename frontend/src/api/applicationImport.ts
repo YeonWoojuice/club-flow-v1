@@ -3,6 +3,9 @@ import type {
   ApplicationImportApplyResult,
   ApplicationImportPreview,
   ApplicationImportRowInput,
+  ApplicationImportSource,
+  ApplicationImportSourceInput,
+  ApplicationImportSourceTable,
   ApplicationImportWorkbook,
 } from "../types/applicationImport";
 import type { GoogleAuthorizationUrl, GoogleConnectionStatus } from "../types/retention";
@@ -49,4 +52,38 @@ export function disconnectGoogleConnection() {
   return apiRequest<void>("/api/google-data/connection", {
     method: "DELETE",
   });
+}
+
+export function listApplicationImportSources(clubId: string) {
+  return apiRequest<ApplicationImportSource[]>(`/api/clubs/${clubId}/application-import/sources`);
+}
+
+export function createApplicationImportSource(clubId: string, input: ApplicationImportSourceInput) {
+  return apiRequest<ApplicationImportSource>(`/api/clubs/${clubId}/application-import/sources`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateApplicationImportSource(
+  clubId: string,
+  sourceId: string,
+  input: ApplicationImportSourceInput,
+) {
+  return apiRequest<ApplicationImportSource>(
+    `/api/clubs/${clubId}/application-import/sources/${sourceId}`,
+    { method: "PUT", body: JSON.stringify(input) },
+  );
+}
+
+export function deleteApplicationImportSource(clubId: string, sourceId: string) {
+  return apiRequest<void>(`/api/clubs/${clubId}/application-import/sources/${sourceId}`, {
+    method: "DELETE",
+  });
+}
+
+export function readApplicationImportSource(clubId: string, sourceId: string) {
+  return apiRequest<ApplicationImportSourceTable>(
+    `/api/clubs/${clubId}/application-import/sources/${sourceId}/table`,
+  );
 }

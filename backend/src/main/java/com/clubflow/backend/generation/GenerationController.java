@@ -55,4 +55,12 @@ public class GenerationController {
     ) {
         return generationService.update(oidcUser.getSubject(), generationId, request);
     }
+
+    @PostMapping("/generations/{generationId}/activate")
+    public GenerationResponse activate(
+            @AuthenticationPrincipal OidcUser oidcUser,
+            @PathVariable UUID generationId
+    ) {
+        return generationService.activate(oidcUser.getSubject(), generationId);
+    }
 }
