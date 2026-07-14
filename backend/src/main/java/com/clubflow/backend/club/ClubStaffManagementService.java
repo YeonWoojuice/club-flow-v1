@@ -17,10 +17,18 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.nio.charset.StandardCharsets;
+import java.util.HexFormat;
 
 @Service
 @Transactional(readOnly = true)
 public class ClubStaffManagementService {
+
+    private static final String INVITATION_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final ClubRepository clubRepository;
     private final ClubStaffRepository clubStaffRepository;
@@ -72,8 +80,10 @@ public class ClubStaffManagementService {
             throw new ConflictException("이미 초대 대기 중인 이메일입니다.");
         }
 
-        ClubStaffInvitation invitation = ClubStaffInvitation.create(club, email, request.role(), president);
-        return ClubStaffInvitationResponse.from(invitationRepository.save(invitation));
+        String invitationCode = generateInvitationCode();
+        ClubStaffInvitation invitation = ClubStaffInvitation.create(
+                club, email, request.role(), president, hashInvitationCode(invitationCode));
+        return ClubStaffInvitationResponse.created(invitationRepository.save(invitation), invitationCode);
     }
 
     public List<ClubStaffInvitationResponse> listClubInvitations(String googleSub, UUID clubId) {
@@ -110,6 +120,24 @@ public class ClubStaffManagementService {
     public ClubStaffResponse acceptInvitation(String googleSub, UUID invitationId) {
         User user = userService.getByGoogleSub(googleSub);
         ClubStaffInvitation invitation = requireInvitationForUser(invitationId, user);
+        return acceptInvitation(invitation, user);
+    }
+
+    @Transactional
+    public ClubStaffInvitationResponse acceptInvitationByCode(String googleSub, String rawCode) {
+        User user = userService.getByGoogleSub(googleSub);
+        String normalizedCode = rawCode.trim().toUpperCase(Locale.ROOT);
+        ClubStaffInvitation invitation = invitationRepository.findByCodeHashForUpdate(
+                        hashInvitationCode(normalizedCode))
+                .orElseThrow(() -> new NotFoundException("유효한 초대 코드를 찾을 수 없습니다."));
+        if (!invitation.getEmail().equalsIgnoreCase(user.getEmail())) {
+            throw new ForbiddenException("초대받은 Google 이메일로 로그인해 주세요.");
+        }
+        acceptInvitation(invitation, user);
+        return ClubStaffInvitationResponse.from(invitation);
+    }
+
+    private ClubStaffResponse acceptInvitation(ClubStaffInvitation invitation, User user) {
         ClubStaff existing = clubStaffRepository.findByClubIdAndUserIdForUpdate(
                 invitation.getClub().getId(), user.getId()).orElse(null);
 
@@ -220,5 +248,23 @@ public class ClubStaffManagementService {
 
     private String normalizeEmail(String email) {
         return email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static String generateInvitationCode() {
+        StringBuilder code = new StringBuilder(8);
+        for (int index = 0; index < 8; index++) {
+            code.append(INVITATION_CODE_CHARS.charAt(SECURE_RANDOM.nextInt(INVITATION_CODE_CHARS.length())));
+        }
+        return code.toString();
+    }
+
+    private static String hashInvitationCode(String code) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(code.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("초대 코드를 처리할 수 없습니다.", exception);
+        }
     }
 }

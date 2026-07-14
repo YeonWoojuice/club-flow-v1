@@ -60,6 +60,10 @@ function renderPage() {
 describe("StaffManagementPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+    });
     api.getClub.mockResolvedValue({ id: "club-1", role: "PRESIDENT" });
     api.listClubStaff.mockResolvedValue([president, staffMember]);
     api.listClubStaffInvitations.mockResolvedValue([]);
@@ -78,19 +82,25 @@ describe("StaffManagementPage", () => {
       invitedByName: "김회장",
       createdAt: "2026-07-10T00:00:00Z",
       respondedAt: null,
+      invitationCode: "ABCD2345",
     };
     api.createStaffInvitation.mockResolvedValueOnce(invitation);
     renderPage();
 
     fireEvent.change(await screen.findByLabelText("Google 이메일"), { target: { value: "new@example.com" } });
     fireEvent.change(screen.getByLabelText("역할", { selector: "select" }), { target: { value: "VICE_PRESIDENT" } });
-    fireEvent.click(screen.getByRole("button", { name: "초대 보내기" }));
+    fireEvent.click(screen.getByRole("button", { name: "초대 코드 만들기" }));
 
     await waitFor(() => expect(api.createStaffInvitation).toHaveBeenCalledWith("club-1", {
       email: "new@example.com",
       role: "VICE_PRESIDENT",
     }));
     expect(await screen.findByText("new@example.com")).toBeInTheDocument();
+    expect(screen.getByText("ABCD2345")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "코드 복사" }));
+    await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith("ABCD2345"));
+    expect(await screen.findByText("초대 코드를 복사했습니다.")).toBeInTheDocument();
   });
 
   it("역할을 변경하고 확인 후 접근 권한을 해제한다", async () => {

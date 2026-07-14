@@ -35,6 +35,22 @@ describe("ClubEntryPage", () => {
     expect(navigate).not.toHaveBeenCalledWith("/clubs/new", expect.anything());
   });
 
+  it("가입한 동아리가 있으면 받은 초대보다 기존 동아리로 먼저 이동한다", async () => {
+    listClubs.mockResolvedValueOnce([{ id: "club-1" }]);
+    listMyStaffInvitations.mockResolvedValueOnce([{
+      id: "invitation-1",
+      status: "PENDING",
+    }]);
+
+    render(<MemoryRouter><ClubEntryPage /></MemoryRouter>);
+
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith(
+      "/clubs/club-1/dashboard",
+      { replace: true },
+    ));
+    expect(navigate).not.toHaveBeenCalledWith("/staff-invitations", expect.anything());
+  });
+
   it("받은 초대와 동아리가 모두 없으면 동아리 생성 화면으로 이동한다", async () => {
     render(<MemoryRouter><ClubEntryPage /></MemoryRouter>);
     await waitFor(() => expect(navigate).toHaveBeenCalledWith("/clubs/new", { replace: true }));

@@ -24,19 +24,19 @@ export function ClubDashboardPage() {
 
   return (
     <AppLayout clubId={clubId}>
-      <header className="flex items-center justify-between border-b border-[var(--border-subtle)] bg-white px-8 py-5">
+      <header className="flex flex-col items-start gap-4 border-b border-[var(--border-subtle)] bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between md:px-8">
         <div>
           <h1 className="text-xl font-extrabold">대시보드</h1>
           <p className="mt-1 text-xs text-[var(--text-secondary)]">동아리 운영 현황을 확인하고 관리합니다.</p>
         </div>
         <Link
           to="/clubs"
-          className="rounded-lg border border-[var(--border)] bg-white px-4 py-2.5 text-xs font-extrabold hover:bg-[var(--panel-muted)]"
+          className="w-full rounded-lg border border-[var(--border)] bg-white px-4 py-2.5 text-center text-xs font-extrabold hover:bg-[var(--panel-muted)] sm:w-auto"
         >
           동아리 전환
         </Link>
       </header>
-      <main className="p-8">
+      <main className="p-4 md:p-8">
         <div className="grid gap-4 sm:grid-cols-3">
           {sections.map(section => (
             <Link

@@ -82,12 +82,33 @@ class ClubStaffManagementIntegrationTests {
         );
 
         assertThat(invitation.email()).isEqualTo("staff@example.com");
+        assertThat(invitation.invitationCode()).matches("[A-Z0-9]{8}");
         assertThat(invitation.status()).isEqualTo(ClubStaffInvitationStatus.PENDING);
         assertThatThrownBy(() -> service.invite(
                 data.ownerSub(), data.club().id(),
                 new CreateClubStaffInvitationRequest("staff@example.com", ClubStaffRole.VICE_PRESIDENT)
         )).isInstanceOf(ConflictException.class);
         assertThat(invitationRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void 초대받은_이메일로_로그인하고_코드를_입력하면_운영진이_된다() {
+        TestClub data = createClub("owner-sub", "owner@example.com", "동아리 A");
+        userService.synchronizeGoogleUser("staff-sub", "staff@example.com", "운영진", null);
+        ClubStaffInvitationResponse invitation = service.invite(
+                data.ownerSub(), data.club().id(),
+                new CreateClubStaffInvitationRequest("staff@example.com", ClubStaffRole.STAFF)
+        );
+
+        ClubStaffInvitationResponse accepted = service.acceptInvitationByCode(
+                "staff-sub", invitation.invitationCode().toLowerCase()
+        );
+
+        assertThat(accepted.status()).isEqualTo(ClubStaffInvitationStatus.ACCEPTED);
+        assertThat(clubStaffRepository.findAllByClubIdWithUser(data.club().id()))
+                .anySatisfy(staff -> assertThat(staff.getUser().getEmail()).isEqualTo("staff@example.com"));
+        assertThat(invitationRepository.findById(invitation.id()).orElseThrow().getInvitationCodeHash())
+                .doesNotContain(invitation.invitationCode());
     }
 
     @Test

@@ -54,6 +54,13 @@ export function acceptStaffInvitation(invitationId: string) {
   });
 }
 
+export function acceptStaffInvitationByCode(code: string) {
+  return apiRequest<StaffInvitation>("/api/staff-invitations/accept-by-code", {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  });
+}
+
 export function rejectStaffInvitation(invitationId: string) {
   return apiRequest<StaffInvitation>(`/api/staff-invitations/${invitationId}/reject`, {
     method: "POST",

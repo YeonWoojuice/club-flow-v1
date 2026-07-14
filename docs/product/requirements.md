@@ -1,4 +1,4 @@
-# ClubFlow MVP 요구사항
+# CrewCat MVP 요구사항
 
 ## 목표
 
@@ -7,7 +7,7 @@
 ## 사용자
 
 - 회장, 부회장, 운영진만 Google 로그인으로 관리 화면에 접근한다.
-- 지원자와 부원은 ClubFlow에 로그인하지 않는다.
+- 지원자와 부원은 CrewCat에 로그인하지 않는다.
 - club_staffs.status가 APPROVED인 운영진만 동아리 데이터에 접근한다.
 
 ## 구현 범위
@@ -57,7 +57,7 @@
 - 표 파일(CSV·엑셀), Google Form 응답 Sheet, 일반 Google Sheet에서 이월 대상 확인
 - 이메일을 기준으로 원본 안의 중복과 새 학기에 이미 존재하는 부원 방지
 - 이월 확정 전에 행별 판정과 제외 사유 미리보기
-- 부원 이월 상세 규칙은 [`docs/features/member-retention/retention_flow.md`](../features/member-retention/retention_flow.md)를 따른다.
+- 잔류 부원 이월 상세 규칙은 [`docs/features/member-retention/retention_flow.md`](../features/member-retention/retention_flow.md)를 따른다.
 - 부원 상태 변경 상세 규칙은 [`docs/features/member-status/status_flow.md`](../features/member-status/status_flow.md)를 따른다.
 
 ## 상태 정책

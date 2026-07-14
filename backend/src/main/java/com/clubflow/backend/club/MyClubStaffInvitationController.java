@@ -2,6 +2,9 @@ package com.clubflow.backend.club;
 
 import com.clubflow.backend.club.dto.ClubStaffInvitationResponse;
 import com.clubflow.backend.club.dto.ClubStaffResponse;
+import com.clubflow.backend.club.dto.AcceptClubStaffInvitationCodeRequest;
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,6 +37,14 @@ public class MyClubStaffInvitationController {
             @PathVariable UUID invitationId
     ) {
         return service.acceptInvitation(oidcUser.getSubject(), invitationId);
+    }
+
+    @PostMapping("/accept-by-code")
+    public ClubStaffInvitationResponse acceptByCode(
+            @AuthenticationPrincipal OidcUser oidcUser,
+            @Valid @RequestBody AcceptClubStaffInvitationCodeRequest request
+    ) {
+        return service.acceptInvitationByCode(oidcUser.getSubject(), request.code());
     }
 
     @PostMapping("/{invitationId}/reject")

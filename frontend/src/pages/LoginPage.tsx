@@ -38,7 +38,7 @@ export function LoginPage() {
           Google로 시작하기
         </a>
         <p className="mt-5 text-center text-[10px] leading-4 text-[var(--text-tertiary)]">
-          최초 로그인 시 ClubFlow 계정이 자동으로 생성됩니다.
+          최초 로그인 시 CrewCat 계정이 자동으로 생성됩니다.
         </p>
       </section>
     </main>

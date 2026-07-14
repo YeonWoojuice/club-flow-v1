@@ -135,20 +135,20 @@ export function GenerationPage() {
   return (
     <AppLayout clubId={clubId}>
       {/* Page header */}
-      <div className="flex items-center justify-between border-b border-[var(--border-subtle)] bg-white px-8 py-5">
+      <div className="flex flex-col items-start gap-4 border-b border-[var(--border-subtle)] bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between md:px-8">
         <div>
           <h1 className="text-xl font-extrabold text-[var(--text-primary)]">학기/기수</h1>
           <p className="mt-0.5 text-sm text-[var(--text-secondary)]">동아리의 학기를 생성하고 관리합니다.</p>
         </div>
         <button
           onClick={() => setShowCreate(prev => !prev)}
-          className="rounded-lg bg-[var(--navy)] px-4 py-2 text-xs font-extrabold text-white transition-opacity hover:opacity-90"
+          className="w-full rounded-lg bg-[var(--navy)] px-4 py-2 text-xs font-extrabold text-white transition-opacity hover:opacity-90 sm:w-auto"
         >
           + 새 학기 만들기
         </button>
       </div>
 
-      <div className="px-8 py-6">
+      <div className="px-4 py-6 md:px-8">
         {/* Error banner */}
         {error && (
           <p role="alert" className="mb-5 rounded-xl bg-[var(--danger-soft)] px-4 py-3 text-xs font-bold text-[var(--danger)]">

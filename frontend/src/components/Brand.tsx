@@ -1,12 +1,32 @@
+type BrandLogoProps = {
+  className?: string;
+  variant?: "default" | "navigation";
+};
+
+export function BrandLogo({ className = "h-8 w-8", variant = "default" }: BrandLogoProps) {
+  const navigation = variant === "navigation";
+
+  return (
+    <span
+      aria-hidden="true"
+      className={`relative shrink-0 overflow-hidden rounded-[8px] ${navigation ? "bg-transparent" : "bg-white"} ${className}`}
+    >
+      <img
+        src={navigation
+          ? "/crewcat-logo-full.png?v=20260714-1030"
+          : "/crewcat-logo.png?v=20260714-1022"}
+        alt=""
+        className={`absolute inset-0 h-full w-full object-cover ${navigation ? "scale-[1.45]" : "scale-100"}`}
+      />
+    </span>
+  );
+}
+
 export function Brand() {
   return (
     <span className="flex items-center gap-2.5">
-      <span aria-hidden="true" className="flex h-8 w-8 items-end justify-center gap-[3px] rounded-[8px] bg-[var(--chrome-active)] px-[7px] py-[7px]">
-        <span className="h-[6px] w-[3px] rounded-[1px] bg-[var(--chrome-text-muted)]" />
-        <span className="h-[11px] w-[3px] rounded-[1px] bg-white" />
-        <span className="h-[15px] w-[3px] rounded-[1px] bg-[var(--chrome-text-muted)]" />
-      </span>
-      <b className="text-lg tracking-[-0.3px] text-[var(--text-primary)]">ClubFlow</b>
+      <BrandLogo />
+      <b className="text-lg tracking-[-0.3px] text-[var(--text-primary)]">CrewCat</b>
     </span>
   );
 }

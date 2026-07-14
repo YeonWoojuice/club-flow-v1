@@ -33,6 +33,8 @@ export function StaffManagementPage() {
   const [changingId, setChangingId] = useState<string | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
+  const [issuedCode, setIssuedCode] = useState("");
+  const [copyMessage, setCopyMessage] = useState("");
 
   const applyLoadedData = useCallback((clubRole: ClubStaffRole, staffResult: ClubStaff[], invitationResult: StaffInvitation[]) => {
     setIsPresident(clubRole === "PRESIDENT");
@@ -88,12 +90,23 @@ export function StaffManagementPage() {
     try {
       const invitation = await createStaffInvitation(clubId, { email: email.trim(), role });
       setInvitations(current => [invitation, ...current]);
+      setIssuedCode(invitation.invitationCode ?? "");
+      setCopyMessage("");
       setEmail("");
       setRole("STAFF");
     } catch (requestError) {
       setError(apiErrorMessage(requestError, "운영진을 초대하지 못했습니다."));
     } finally {
       setInviting(false);
+    }
+  };
+
+  const handleCopyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(issuedCode);
+      setCopyMessage("초대 코드를 복사했습니다.");
+    } catch {
+      setCopyMessage("복사하지 못했습니다. 코드를 직접 선택해 복사해 주세요.");
     }
   };
 
@@ -168,7 +181,7 @@ export function StaffManagementPage() {
         {!loading && !error && isPresident && (
           <section className="rounded-xl border border-[var(--border-subtle)] bg-white p-5 sm:p-6">
             <h2 className="text-sm font-extrabold text-[var(--text-primary)]">새 운영진 초대</h2>
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">초대받은 사람은 같은 Google 이메일로 로그인한 뒤 초대를 수락할 수 있습니다.</p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">메일은 자동 발송되지 않습니다. 생성된 코드를 초대받을 사람에게 직접 전달해 주세요.</p>
             <form onSubmit={handleInvite} className="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_160px_auto] sm:items-end">
               <label className="grid gap-1.5 text-xs font-bold">
                 Google 이메일
@@ -182,9 +195,21 @@ export function StaffManagementPage() {
                 </select>
               </label>
               <button disabled={inviting} className="h-9 rounded-lg bg-[var(--navy)] px-5 text-xs font-extrabold text-white disabled:opacity-40">
-                {inviting ? "초대 중..." : "초대 보내기"}
+                {inviting ? "코드 만드는 중..." : "초대 코드 만들기"}
               </button>
             </form>
+            {issuedCode && (
+              <div className="mt-4 rounded-lg bg-[var(--success-soft)] p-4" aria-live="polite">
+                <p className="text-xs font-bold text-[var(--success)]">초대 코드가 생성되었습니다. 이 화면에서 지금 복사해 전달해 주세요.</p>
+                <div className="mt-2 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+                  <code className="block select-all text-lg font-extrabold tracking-[0.2em] text-[var(--text-primary)]">{issuedCode}</code>
+                  <button type="button" onClick={() => void handleCopyCode()} className="rounded-lg border border-[var(--success)] px-3 py-2 text-xs font-extrabold text-[var(--success)]">
+                    코드 복사
+                  </button>
+                </div>
+                {copyMessage && <p className="mt-2 text-xs font-bold text-[var(--success)]">{copyMessage}</p>}
+              </div>
+            )}
           </section>
         )}
 

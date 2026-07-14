@@ -50,23 +50,33 @@ public class ClubStaffInvitation {
     @Column(name = "responded_at")
     private Instant respondedAt;
 
+    @Column(name = "invitation_code_hash", length = 64)
+    private String invitationCodeHash;
+
     protected ClubStaffInvitation() {
     }
 
-    private ClubStaffInvitation(Club club, String email, ClubStaffRole role, User invitedBy) {
+    private ClubStaffInvitation(Club club, String email, ClubStaffRole role, User invitedBy, String invitationCodeHash) {
         this.club = club;
         this.email = email.trim().toLowerCase(Locale.ROOT);
         this.role = role;
         this.status = ClubStaffInvitationStatus.PENDING;
         this.invitedBy = invitedBy;
+        this.invitationCodeHash = invitationCodeHash;
         this.createdAt = Instant.now();
     }
 
-    public static ClubStaffInvitation create(Club club, String email, ClubStaffRole role, User invitedBy) {
+    public static ClubStaffInvitation create(
+            Club club,
+            String email,
+            ClubStaffRole role,
+            User invitedBy,
+            String invitationCodeHash
+    ) {
         if (role == null || role == ClubStaffRole.PRESIDENT) {
             throw new IllegalArgumentException("초대할 수 없는 운영진 역할입니다.");
         }
-        return new ClubStaffInvitation(club, email, role, invitedBy);
+        return new ClubStaffInvitation(club, email, role, invitedBy, invitationCodeHash);
     }
 
     public void accept() {
@@ -104,4 +114,5 @@ public class ClubStaffInvitation {
     public User getInvitedBy() { return invitedBy; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getRespondedAt() { return respondedAt; }
+    public String getInvitationCodeHash() { return invitationCodeHash; }
 }

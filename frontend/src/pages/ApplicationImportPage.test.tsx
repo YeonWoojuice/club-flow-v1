@@ -50,6 +50,7 @@ vi.mock("../components/AppLayout", () => ({
 
 describe("ApplicationImportPage", () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
     listGenerations.mockResolvedValue([
       { id: "generation-1", name: "26-1", status: "ACTIVE" },
@@ -100,6 +101,7 @@ describe("ApplicationImportPage", () => {
   });
 
   it("Sheet 열을 연결하고 나머지 열을 답변으로 포함해 미리보기 후 등록한다", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     render(
       <MemoryRouter initialEntries={["/clubs/club-1/applications/import"]}>
         <Routes>
@@ -152,13 +154,43 @@ describe("ApplicationImportPage", () => {
     ));
     expect(await screen.findAllByText("원본 중복")).toHaveLength(3);
 
+    fireEvent.change(screen.getByLabelText("전화번호 (선택)"), { target: { value: "" } });
+    expect(screen.queryByText("4. 결과 확인 후 등록")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "중복 확인하고 미리보기" }));
+    await screen.findByRole("button", { name: "등록 가능 1명 확정" });
+
     fireEvent.click(screen.getByRole("button", { name: "등록 가능 1명 확정" }));
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("'26-1'에 지원자 1명을 등록할까요?"));
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("등록 제외 2명"));
     await waitFor(() => expect(applyApplicationImport).toHaveBeenCalledWith(
       "club-1",
       "generation-1",
       expect.arrayContaining([expect.objectContaining({ email: "apply@example.com" })]),
     ));
     expect(await screen.findByText(/1명의 지원자를 등록했습니다/)).toBeInTheDocument();
+  });
+
+  it("등록 확인을 취소하면 지원자를 저장하지 않는다", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(
+      <MemoryRouter initialEntries={["/clubs/club-1/applications/import"]}>
+        <Routes><Route path="/clubs/:clubId/applications/import" element={<ApplicationImportPage />} /></Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("연결 계정: staff@example.com");
+    fireEvent.change(screen.getByLabelText("Google Sheet 주소 또는 ID"), { target: { value: "sheet-123" } });
+    fireEvent.click(screen.getByRole("button", { name: "불러오기" }));
+    await screen.findByText("3. Sheet의 열 연결하기 (열 매핑)");
+    fireEvent.change(screen.getByLabelText("이름 (필수)"), { target: { value: "0" } });
+    fireEvent.change(screen.getByLabelText("이메일 (필수)"), { target: { value: "1" } });
+    fireEvent.change(screen.getByLabelText("학번 (필수)"), { target: { value: "2" } });
+    fireEvent.click(screen.getByRole("button", { name: "중복 확인하고 미리보기" }));
+    await screen.findByRole("button", { name: "등록 가능 1명 확정" });
+
+    fireEvent.click(screen.getByRole("button", { name: "등록 가능 1명 확정" }));
+
+    expect(applyApplicationImport).not.toHaveBeenCalled();
   });
 
   it("Google 연결 실패를 안내하고 연결을 해제할 수 있다", async () => {

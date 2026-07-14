@@ -45,16 +45,16 @@ React 로그인 화면
 ## Google Sheet 읽기 권한
 
 관리 화면 로그인과 Google Sheet 읽기는 별도 흐름입니다. 로그인할 때는 사용자 식별에 필요한
-`openid/profile/email`만 요청하고, 부원 이월 화면에서 Sheet를 처음 사용할 때 읽기 전용 권한을
+`openid/profile/email`만 요청하고, 잔류 부원 이월 화면에서 Sheet를 처음 사용할 때 읽기 전용 권한을
 추가로 요청합니다.
 
 ```text
-부원 이월 화면
+잔류 부원 이월 화면
   → GET /api/google-data/oauth/authorization-url
   → Google에서 spreadsheets.readonly 동의
   → GET /api/google-data/oauth/callback
   → 접근·갱신 토큰을 암호화해 google_connections에 저장
-  → 원래 부원 이월 화면으로 복귀
+  → 원래 잔류 부원 이월 화면으로 복귀
 ```
 
 - OAuth 요청의 `state`는 서버 세션에 저장해 콜백 위조를 막습니다.
@@ -70,4 +70,4 @@ React 로그인 화면
 - 백엔드: `backend/src/main/java/com/clubflow/backend/auth/`
 - 프론트엔드: `frontend/src/auth/`, `frontend/src/api/auth.ts`
 - 권한 모델: `docs/product/data-model.md`
-- 부원 이월: `docs/features/member-retention/retention_flow.md`
+- 잔류 부원 이월: `docs/features/member-retention/retention_flow.md`

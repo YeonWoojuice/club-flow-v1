@@ -1,4 +1,4 @@
-# ClubFlow MVP 데이터 모델
+# CrewCat MVP 데이터 모델
 
 ## 관계
 
@@ -97,7 +97,7 @@ generations 1 ── N applications N ── 1 persons
 | created_at | TIMESTAMPTZ | NOT NULL |
 | responded_at | TIMESTAMPTZ | NULL 허용 |
 
-- 아직 ClubFlow에 로그인하지 않은 사람도 Google 이메일로 미리 초대할 수 있다.
+- 아직 CrewCat에 로그인하지 않은 사람도 Google 이메일로 미리 초대할 수 있다.
 - 같은 동아리·이메일에는 `PENDING` 초대가 하나만 존재할 수 있다.
 - 로그인으로 확인된 이메일과 초대 이메일이 같은 사용자만 수락하거나 거절할 수 있다.
 - 초대 수락 시 기존에 해제된 `club_staffs` 행이 있으면 새 행을 만들지 않고 다시 승인한다.

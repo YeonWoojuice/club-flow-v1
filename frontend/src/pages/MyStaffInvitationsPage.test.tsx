@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ReactNode } from "react";
 import { ApiError } from "../api/http";
 import { MyStaffInvitationsPage } from "./MyStaffInvitationsPage";
 
@@ -11,6 +12,11 @@ const api = vi.hoisted(() => ({
 }));
 
 vi.mock("../api/staff", () => api);
+vi.mock("../components/AppLayout", () => ({
+  AppLayout: ({ clubId, children }: { clubId: string; children: ReactNode }) => (
+    <div data-testid="app-layout" data-club-id={clubId}>{children}</div>
+  ),
+}));
 
 const invitation = {
   id: "invitation-1",
@@ -42,7 +48,25 @@ describe("MyStaffInvitationsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "수락" }));
 
     await waitFor(() => expect(api.acceptStaffInvitation).toHaveBeenCalledWith("invitation-1"));
+    expect(await screen.findByText("ClubFlow 운영진 초대를 수락했습니다.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "ClubFlow 동아리로 이동" })).toHaveAttribute(
+      "href",
+      "/clubs/club-1/dashboard",
+    );
     expect(await screen.findByText("현재 기다리고 있는 운영진 초대가 없습니다.")).toBeInTheDocument();
+  });
+
+  it("동아리 사이드바에서 열면 공통 동아리 레이아웃 안에 표시한다", async () => {
+    render(
+      <MemoryRouter initialEntries={["/clubs/club-1/staff-invitations"]}>
+        <Routes>
+          <Route path="/clubs/:clubId/staff-invitations" element={<MyStaffInvitationsPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId("app-layout")).toHaveAttribute("data-club-id", "club-1");
+    expect(screen.getByRole("heading", { name: "받은 운영진 초대" })).toBeInTheDocument();
   });
 
   it("처리 중에는 버튼을 잠가 중복 요청을 막는다", async () => {
@@ -52,7 +76,9 @@ describe("MyStaffInvitationsPage", () => {
     const accept = await screen.findByRole("button", { name: "수락" });
 
     fireEvent.click(accept);
-    expect(await screen.findAllByRole("button", { name: "처리 중..." })).toHaveLength(2);
+    expect(await screen.findByRole("button", { name: "수락 중..." })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "거절" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "거절 중..." })).not.toBeInTheDocument();
     fireEvent.click(accept);
     expect(api.acceptStaffInvitation).toHaveBeenCalledOnce();
     resolveAccept();

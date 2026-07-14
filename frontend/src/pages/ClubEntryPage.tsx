@@ -25,7 +25,7 @@ export function ClubEntryPage() {
 
     const clubs = clubsResult.value;
     const invitations = invitationsResult.status === "fulfilled" ? invitationsResult.value : [];
-    if (invitations.some(invitation => invitation.status === "PENDING")) {
+    if (clubs.length === 0 && invitations.some(invitation => invitation.status === "PENDING")) {
       navigate("/staff-invitations", { replace: true });
       return;
     }

@@ -38,4 +38,12 @@ public interface ClubStaffInvitationRepository extends JpaRepository<ClubStaffIn
             where invitation.id = :id
             """)
     Optional<ClubStaffInvitation> findByIdForUpdate(@Param("id") UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select invitation from ClubStaffInvitation invitation
+            join fetch invitation.club
+            where invitation.invitationCodeHash = :codeHash
+            """)
+    Optional<ClubStaffInvitation> findByCodeHashForUpdate(@Param("codeHash") String codeHash);
 }

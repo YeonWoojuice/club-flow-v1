@@ -68,6 +68,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/staff-invitations/accept-by-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["acceptByCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/generations/{generationId}/activate": {
         parameters: {
             query?: never;
@@ -689,6 +705,7 @@ export interface components {
             createdAt?: string;
             /** Format: date-time */
             respondedAt?: string;
+            invitationCode?: string;
         };
         ClubStaffResponse: {
             /** Format: uuid */
@@ -705,6 +722,9 @@ export interface components {
             createdAt?: string;
             /** Format: date-time */
             updatedAt?: string;
+        };
+        AcceptClubStaffInvitationCodeRequest: {
+            code: string;
         };
         CreateClubRequest: {
             name: string;
@@ -1004,8 +1024,8 @@ export interface components {
         };
         CsrfToken: {
             headerName?: string;
-            parameterName?: string;
             token?: string;
+            parameterName?: string;
         };
         CsrfTokenResponse: {
             headerName?: string;
@@ -1278,6 +1298,66 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ClubStaffResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    acceptByCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptClubStaffInvitationCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ClubStaffInvitationResponse"];
                 };
             };
             /** @description Bad Request */

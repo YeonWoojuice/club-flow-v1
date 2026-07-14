@@ -36,6 +36,7 @@ vi.mock("../components/AppLayout", () => ({
 
 describe("RetentionImportPage", () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
     listGenerations.mockResolvedValue([
       { id: "previous-1", name: "25-2", status: "CLOSED" },
@@ -81,6 +82,7 @@ describe("RetentionImportPage", () => {
   }
 
   it("열을 연결해 중복을 미리보고 READY인 부원만 확정한다", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     renderPage();
 
     await waitFor(() => expect(listGenerations).toHaveBeenCalledWith("club-1"));
@@ -102,12 +104,65 @@ describe("RetentionImportPage", () => {
     ));
     expect(await screen.findAllByText("원본 중복")).toHaveLength(2);
 
+    fireEvent.change(screen.getByLabelText(/^잔류로 인정할 값/), {
+      target: { value: "잔류,예,Y,YES,TRUE,1" },
+    });
+    expect(screen.queryByText("4. 결과 확인 후 이월")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "중복 확인하고 미리보기" }));
+    await screen.findByRole("button", { name: "이월 가능 1명 확정" });
+
     fireEvent.click(screen.getByRole("button", { name: "이월 가능 1명 확정" }));
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("'25-2'에서 '26-1'(으)로 1명을 이월할까요?"));
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("이월 제외 2명"));
 
     await waitFor(() => expect(applyRetention).toHaveBeenCalledWith(
       "club-1", "previous-1", "target-1", ["person-ready"],
     ));
     expect(await screen.findByText(/1명을 새 학기 부원으로 이월했습니다/)).toBeInTheDocument();
+  });
+
+  it("첫 번째 열도 이메일 열로 선택해 미리볼 수 있다", async () => {
+    parseRetentionFile.mockResolvedValueOnce({
+      tables: [{
+        name: "members.csv",
+        headers: ["이메일", "이름", "잔류 여부"],
+        rows: [["keep@example.com", "김잔류", "예"]],
+      }],
+    });
+    renderPage();
+
+    fireEvent.change(await screen.findByLabelText("표 파일 선택 (엑셀 .xlsx 또는 CSV .csv)"), {
+      target: { files: [new File(["data"], "members.csv", { type: "text/csv" })] },
+    });
+    await screen.findByText("3. 열 이름 연결 (열 매핑)");
+    fireEvent.change(screen.getByLabelText("이메일 (필수)"), { target: { value: "0" } });
+    fireEvent.change(screen.getByLabelText("잔류 여부 (필수)"), { target: { value: "2" } });
+    fireEvent.click(screen.getByRole("button", { name: "중복 확인하고 미리보기" }));
+
+    await waitFor(() => expect(previewRetention).toHaveBeenCalledWith(
+      "club-1",
+      "previous-1",
+      "target-1",
+      [expect.objectContaining({ email: "keep@example.com", retained: true })],
+    ));
+  });
+
+  it("이월 확인을 취소하면 부원을 저장하지 않는다", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    renderPage();
+
+    fireEvent.change(await screen.findByLabelText("표 파일 선택 (엑셀 .xlsx 또는 CSV .csv)"), {
+      target: { files: [new File(["data"], "members.csv", { type: "text/csv" })] },
+    });
+    await screen.findByText("3. 열 이름 연결 (열 매핑)");
+    fireEvent.change(screen.getByLabelText("이메일 (필수)"), { target: { value: "1" } });
+    fireEvent.change(screen.getByLabelText("잔류 여부 (필수)"), { target: { value: "2" } });
+    fireEvent.click(screen.getByRole("button", { name: "중복 확인하고 미리보기" }));
+    await screen.findByRole("button", { name: "이월 가능 1명 확정" });
+
+    fireEvent.click(screen.getByRole("button", { name: "이월 가능 1명 확정" }));
+
+    expect(applyRetention).not.toHaveBeenCalled();
   });
 
   it("Google 연결 콜백 결과를 사용자에게 안내한다", async () => {
@@ -131,7 +186,12 @@ describe("RetentionImportPage", () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole("button", { name: "Google Sheet" }));
-    expect(await screen.findByText("연결 계정: staff@example.com")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Sheet 불러오기" })).toBeDisabled();
+    const accountSettings = screen.getByText("연결된 Google 계정 설정").closest("details");
+    expect(accountSettings).not.toHaveAttribute("open");
+    fireEvent.click(screen.getByText("연결된 Google 계정 설정"));
+    expect(accountSettings).toHaveAttribute("open");
+    expect(screen.getByText("staff@example.com")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Google 연결 해제" }));
 
     await waitFor(() => expect(disconnectGoogleConnection).toHaveBeenCalledOnce());

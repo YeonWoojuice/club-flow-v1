@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   acceptStaffInvitation,
+  acceptStaffInvitationByCode,
   cancelStaffInvitation,
   changeClubStaffRole,
   createStaffInvitation,
@@ -45,9 +46,14 @@ describe("staff api", () => {
     await listMyStaffInvitations();
     await acceptStaffInvitation("invitation-1");
     await rejectStaffInvitation("invitation-2");
+    await acceptStaffInvitationByCode("ABCD2345");
 
     expect(apiRequest).toHaveBeenNthCalledWith(1, "/api/staff-invitations/me");
     expect(apiRequest).toHaveBeenNthCalledWith(2, "/api/staff-invitations/invitation-1/accept", { method: "POST" });
     expect(apiRequest).toHaveBeenNthCalledWith(3, "/api/staff-invitations/invitation-2/reject", { method: "POST" });
+    expect(apiRequest).toHaveBeenNthCalledWith(4, "/api/staff-invitations/accept-by-code", {
+      method: "POST",
+      body: JSON.stringify({ code: "ABCD2345" }),
+    });
   });
 });

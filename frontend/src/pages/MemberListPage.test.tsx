@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { ApiError } from "../api/http";
@@ -49,11 +49,31 @@ const activeMember: GenerationMember = {
   createdAt: "2026-07-01T00:00:00Z",
 };
 
+const inactiveUnpaidMember: GenerationMember = {
+  ...activeMember,
+  id: "member-2",
+  personId: "person-2",
+  name: "이부원",
+  email: "inactive@example.com",
+  studentNumber: "20250002",
+  status: "INACTIVE",
+  duesStatus: "UNPAID",
+};
+
+function HistoryControl() {
+  const navigate = useNavigate();
+  return (
+    <button type="button" onClick={() => navigate("?generationId=generation-old")}>
+      이전 학기 주소로 이동
+    </button>
+  );
+}
+
 function renderPage() {
   return render(
     <MemoryRouter initialEntries={["/clubs/club-1/members"]}>
       <Routes>
-        <Route path="/clubs/:clubId/members" element={<MemberListPage />} />
+        <Route path="/clubs/:clubId/members" element={<><MemberListPage /><HistoryControl /></>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -86,6 +106,16 @@ describe("MemberListPage", () => {
     await waitFor(() => expect(listMembers).toHaveBeenCalledWith("club-1", "generation-old"));
   });
 
+  it("주소의 학기 값이 바뀌면 선택 학기와 부원 요청도 함께 바뀐다", async () => {
+    renderPage();
+    await waitFor(() => expect(listMembers).toHaveBeenCalledWith("club-1", "generation-1"));
+
+    fireEvent.click(screen.getByRole("button", { name: "이전 학기 주소로 이동" }));
+
+    await waitFor(() => expect(screen.getByLabelText("조회할 학기")).toHaveValue("generation-old"));
+    await waitFor(() => expect(listMembers).toHaveBeenCalledWith("club-1", "generation-old"));
+  });
+
   it("회계 부원이 회비 확인 상태를 납부로 변경한다", async () => {
     renderPage();
 
@@ -107,7 +137,7 @@ describe("MemberListPage", () => {
       "member-1",
       { status: "INACTIVE", reason: "군 복무" },
     ));
-    expect(await screen.findByText("비활동")).toBeInTheDocument();
+    expect((await screen.findAllByText("비활동")).length).toBeGreaterThan(0);
     expect(screen.queryByText("김부원 상태 변경")).not.toBeInTheDocument();
   });
 
@@ -162,7 +192,7 @@ describe("MemberListPage", () => {
     expect(changeGenerationMemberStatus).toHaveBeenCalledOnce();
 
     await act(async () => resolveChange({ ...activeMember, status: "INACTIVE" }));
-    expect(await screen.findByText("비활동")).toBeInTheDocument();
+    expect((await screen.findAllByText("비활동")).length).toBeGreaterThan(0);
   });
 
   it("상태 변경 이력의 로딩과 결과를 표시하고 다시 닫는다", async () => {
@@ -202,5 +232,34 @@ describe("MemberListPage", () => {
     listGenerationMemberStatusHistory.mockResolvedValueOnce([]);
     fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
     expect(await screen.findByText("아직 상태 변경 이력이 없습니다.")).toBeInTheDocument();
+  });
+
+  it("제목 행의 상태 필터를 적용하고 적용된 제목을 회색으로 표시한다", async () => {
+    listMembers.mockResolvedValueOnce([activeMember, inactiveUnpaidMember]);
+    renderPage();
+
+    const statusHeader = await screen.findByRole("button", { name: "상태" });
+    fireEvent.click(statusHeader);
+    fireEvent.change(screen.getByLabelText("표 상태 필터"), { target: { value: "INACTIVE" } });
+
+    await waitFor(() => expect(screen.queryAllByText("이부원").length).toBeGreaterThan(0));
+    expect(screen.queryAllByText("김부원")).toHaveLength(0);
+    expect(statusHeader.parentElement).toHaveClass("bg-[var(--panel-muted)]");
+    expect(screen.getByText("1명 표시 중")).toBeInTheDocument();
+  });
+
+  it("학번과 회비 여부를 함께 필터링하고 초기화한다", async () => {
+    listMembers.mockResolvedValueOnce([activeMember, inactiveUnpaidMember]);
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "이름/이메일/학번" }));
+    fireEvent.change(screen.getByLabelText("표 학번 필터"), { target: { value: "2025" } });
+    fireEvent.click(screen.getByRole("button", { name: "회비 확인" }));
+    fireEvent.change(screen.getByLabelText("표 회비 필터"), { target: { value: "UNPAID" } });
+
+    await waitFor(() => expect(screen.queryAllByText("이부원").length).toBeGreaterThan(0));
+    expect(screen.queryAllByText("김부원")).toHaveLength(0);
+    fireEvent.click(screen.getByRole("button", { name: "필터 초기화" }));
+    await waitFor(() => expect(screen.queryAllByText("김부원").length).toBeGreaterThan(0));
   });
 });

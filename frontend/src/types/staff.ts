@@ -12,6 +12,7 @@ export type ClubStaff = Required<StaffSchema>;
 
 export type StaffInvitation = Required<Omit<InvitationSchema, "respondedAt">> & {
   respondedAt: string | null;
+  invitationCode?: string | null;
 };
 
 export type CreateStaffInvitationInput = Omit<

@@ -17,7 +17,8 @@ public record ClubStaffInvitationResponse(
         UUID invitedByUserId,
         String invitedByName,
         Instant createdAt,
-        Instant respondedAt
+        Instant respondedAt,
+        String invitationCode
 ) {
     public static ClubStaffInvitationResponse from(ClubStaffInvitation invitation) {
         return new ClubStaffInvitationResponse(
@@ -30,7 +31,17 @@ public record ClubStaffInvitationResponse(
                 invitation.getInvitedBy().getId(),
                 invitation.getInvitedBy().getName(),
                 invitation.getCreatedAt(),
-                invitation.getRespondedAt()
+                invitation.getRespondedAt(),
+                null
+        );
+    }
+
+    public static ClubStaffInvitationResponse created(ClubStaffInvitation invitation, String invitationCode) {
+        ClubStaffInvitationResponse response = from(invitation);
+        return new ClubStaffInvitationResponse(
+                response.id(), response.clubId(), response.clubName(), response.email(), response.role(),
+                response.status(), response.invitedByUserId(), response.invitedByName(), response.createdAt(),
+                response.respondedAt(), invitationCode
         );
     }
 }

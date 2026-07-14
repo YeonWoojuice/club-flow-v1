@@ -109,14 +109,32 @@ export function ApplicationImportPage() {
     return table.headers.filter((header, index) => header.trim() && !fixed.has(String(index))).length;
   }, [emailColumn, nameColumn, phoneColumn, studentNumberColumn, submittedAtColumn, table]);
 
+  const invalidatePreview = () => {
+    setPreviewRows([]);
+    setPreview(null);
+  };
+
   const resetMapping = () => {
     setNameColumn("");
     setEmailColumn("");
     setStudentNumberColumn("");
     setPhoneColumn("");
     setSubmittedAtColumn("");
-    setPreviewRows([]);
-    setPreview(null);
+    invalidatePreview();
+  };
+
+  const changeSpreadsheet = (value: string) => {
+    setSpreadsheet(value);
+    setWorkbook(null);
+    resetMapping();
+  };
+
+  const changeMappedColumn = (
+    setter: (value: string) => void,
+    value: string,
+  ) => {
+    setter(value);
+    invalidatePreview();
   };
 
   const connectGoogle = async () => {
@@ -157,6 +175,7 @@ export function ApplicationImportPage() {
       setError("Google Sheet 주소 또는 ID를 입력해 주세요.");
       return;
     }
+    invalidatePreview();
     setBusy(true);
     setError("");
     setSuccess("");
@@ -189,6 +208,7 @@ export function ApplicationImportPage() {
   };
 
   const loadSavedSource = async (source: ApplicationImportSource) => {
+    invalidatePreview();
     setSourceBusy(source.id);
     setError("");
     setSuccess("");
@@ -311,6 +331,7 @@ export function ApplicationImportPage() {
       return;
     }
     const rows = mappedRows();
+    invalidatePreview();
     setBusy(true);
     setError("");
     setSuccess("");
@@ -327,6 +348,12 @@ export function ApplicationImportPage() {
 
   const confirmApply = async () => {
     if (!preview || preview.readyCount === 0) return;
+    const generationName = generations.find(item => item.id === generationId)?.name ?? "선택한 학기";
+    const excludedCount = preview.totalCount - preview.readyCount;
+    const confirmed = window.confirm(
+      `'${generationName}'에 지원자 ${preview.readyCount}명을 등록할까요?\n등록 제외 ${excludedCount}명은 저장되지 않습니다.`,
+    );
+    if (!confirmed) return;
     setBusy(true);
     setError("");
     try {
@@ -362,7 +389,7 @@ export function ApplicationImportPage() {
         <section className="rounded-xl border border-[var(--border-subtle)] bg-white p-5">
           <h2 className="text-sm font-extrabold">1. 지원 학기 선택</h2>
           <label className="mt-4 grid max-w-md gap-1.5 text-xs font-bold">진행 중인 학기
-            <select className="control" value={generationId} onChange={event => { setGenerationId(event.target.value); setPreview(null); }}>
+            <select className="control" value={generationId} onChange={event => { setGenerationId(event.target.value); invalidatePreview(); }}>
               <option value="">선택해 주세요</option>
               {activeGenerations.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select>
@@ -421,7 +448,7 @@ export function ApplicationImportPage() {
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <label className="grid flex-1 gap-1.5 text-xs font-bold">Google Sheet 주소 또는 ID
-                  <input disabled={googleBusy !== null} className="control" value={spreadsheet} onChange={event => setSpreadsheet(event.target.value)} placeholder="https://docs.google.com/spreadsheets/d/..." />
+                  <input disabled={googleBusy !== null} className="control" value={spreadsheet} onChange={event => changeSpreadsheet(event.target.value)} placeholder="https://docs.google.com/spreadsheets/d/..." />
                 </label>
                 <button type="button" disabled={busy || googleBusy !== null} onClick={() => void loadGoogleSheet()} className="self-end rounded-lg bg-[var(--navy)] px-4 py-2.5 text-xs font-bold text-white disabled:opacity-40">{busy ? "불러오는 중..." : "불러오기"}</button>
               </div>
@@ -449,11 +476,11 @@ export function ApplicationImportPage() {
               </select>
             </label>}
             <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <ColumnSelect label="이름 (필수)" value={nameColumn} headers={table.headers} onChange={setNameColumn} required />
-              <ColumnSelect label="이메일 (필수)" value={emailColumn} headers={table.headers} onChange={setEmailColumn} required />
-              <ColumnSelect label="학번 (필수)" value={studentNumberColumn} headers={table.headers} onChange={setStudentNumberColumn} required />
-              <ColumnSelect label="전화번호 (선택)" value={phoneColumn} headers={table.headers} onChange={setPhoneColumn} />
-              <ColumnSelect label="응답 시간 (선택)" value={submittedAtColumn} headers={table.headers} onChange={setSubmittedAtColumn} />
+              <ColumnSelect label="이름 (필수)" value={nameColumn} headers={table.headers} onChange={value => changeMappedColumn(setNameColumn, value)} required />
+              <ColumnSelect label="이메일 (필수)" value={emailColumn} headers={table.headers} onChange={value => changeMappedColumn(setEmailColumn, value)} required />
+              <ColumnSelect label="학번 (필수)" value={studentNumberColumn} headers={table.headers} onChange={value => changeMappedColumn(setStudentNumberColumn, value)} required />
+              <ColumnSelect label="전화번호 (선택)" value={phoneColumn} headers={table.headers} onChange={value => changeMappedColumn(setPhoneColumn, value)} />
+              <ColumnSelect label="응답 시간 (선택)" value={submittedAtColumn} headers={table.headers} onChange={value => changeMappedColumn(setSubmittedAtColumn, value)} />
             </div>
             <div className="mt-4 rounded-lg border border-[var(--border-subtle)] bg-[var(--panel-muted)] p-4">
               <h3 className="text-xs font-extrabold">다음에도 한 번에 불러오기</h3>
@@ -503,6 +530,10 @@ export function ApplicationImportPage() {
                 <tbody>{preview.rows.map(row => <tr key={`${row.rowNumber}-${row.email}`} className="border-t border-[var(--border-subtle)]"><td className="p-3">{row.rowNumber}</td><td className="p-3">{row.name || "-"}</td><td className="p-3">{row.email || "-"}</td><td className="p-3 font-bold">{statusLabel[row.status]}</td><td className="p-3 text-[var(--text-secondary)]">{row.message}</td></tr>)}</tbody>
               </table>
             </div>
+            <p className="mt-4 text-xs text-[var(--text-secondary)]">
+              대상 학기: <strong className="text-[var(--text-primary)]">{generations.find(item => item.id === generationId)?.name ?? "-"}</strong>
+              {" · "}등록 {preview.readyCount}명 · 제외 {preview.totalCount - preview.readyCount}명
+            </p>
             <button type="button" disabled={busy || preview.readyCount === 0} onClick={() => void confirmApply()} className="mt-5 rounded-lg bg-[var(--navy)] px-5 py-2.5 text-xs font-bold text-white disabled:opacity-40">{busy ? "등록하는 중..." : `등록 가능 ${preview.readyCount}명 확정`}</button>
           </section>
         )}

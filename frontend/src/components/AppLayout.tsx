@@ -4,8 +4,15 @@ import { logout } from "../api/auth";
 import { getClub } from "../api/clubs";
 import { ApiError } from "../api/http";
 import { useAuth } from "../auth/AuthContext";
-import { ErrorToast } from "./ErrorToast";
 import type { Club, ClubStaffRole } from "../types/club";
+import { BrandLogo } from "./Brand";
+import { ErrorToast } from "./ErrorToast";
+import {
+  clearCachedClubs,
+  deleteCachedClub,
+  getCachedClub,
+  setCachedClub,
+} from "./appLayoutClubCache";
 
 const roleLabel: Record<ClubStaffRole, string> = {
   PRESIDENT: "회장",
@@ -22,26 +29,46 @@ export function AppLayout({ clubId, children }: AppLayoutProps) {
   const { user, clear } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [club, setClub] = useState<Club | null>(null);
+  const [loadedClub, setLoadedClub] = useState<{ clubId: string; club: Club } | null>(() => {
+    const cachedClub = getCachedClub(clubId);
+    return cachedClub ? { clubId, club: cachedClub } : null;
+  });
+  const [failedProfileImageUrl, setFailedProfileImageUrl] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
+    let active = true;
     getClub(clubId)
-      .then(setClub)
+      .then(nextClub => {
+        setCachedClub(clubId, nextClub);
+        if (active) {
+          setLoadedClub({ clubId, club: nextClub });
+        }
+      })
       .catch(err => {
         if (err instanceof ApiError && err.status === 403) {
+          deleteCachedClub(clubId);
           navigate("/clubs", { replace: true });
         }
       });
+
+    return () => {
+      active = false;
+    };
   }, [clubId, navigate]);
+
+  const club = loadedClub?.clubId === clubId ? loadedClub.club : getCachedClub(clubId);
+  const profileImageUrl = user?.profileImageUrl ?? null;
+  const showProfileImage = profileImageUrl && failedProfileImageUrl !== profileImageUrl;
 
   const handleLogout = async () => {
     setLoggingOut(true);
     setLogoutError("");
     try {
       await logout();
+      clearCachedClubs();
       clear();
       navigate("/login", { replace: true });
     } catch {
@@ -56,34 +83,35 @@ export function AppLayout({ clubId, children }: AppLayoutProps) {
     { label: "학기/기수", to: `/clubs/${clubId}/generations` },
     { label: "지원자 관리", to: `/clubs/${clubId}/applications` },
     { label: "부원 관리", to: `/clubs/${clubId}/members`, exact: true },
-    { label: "부원 이월", to: `/clubs/${clubId}/members/retention` },
+    { label: "잔류 부원 이월", to: `/clubs/${clubId}/members/retention` },
     ...(club?.role === "PRESIDENT"
       ? [{ label: "운영진 관리", to: `/clubs/${clubId}/staff` }]
       : []),
-    { label: "받은 초대", to: "/staff-invitations", exact: true },
+    { label: "받은 초대", to: `/clubs/${clubId}/staff-invitations`, exact: true },
   ];
 
   const initials = user?.name?.[0]?.toUpperCase() ?? "?";
 
   return (
-    <div className="flex h-screen overflow-hidden font-body">
+    <div className="flex h-dvh min-w-0 overflow-hidden font-body">
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex h-full w-60 shrink-0 flex-col bg-[var(--sidebar-bg)] px-5 py-6 transition-transform md:relative md:translate-x-0 ${
+        id="app-sidebar"
+        className={`fixed inset-y-0 left-0 z-50 flex h-full w-[min(15rem,calc(100vw-3rem))] shrink-0 flex-col bg-[var(--sidebar-bg)] px-5 py-6 transition-transform lg:relative lg:w-60 lg:translate-x-0 lg:transition-none ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Close button — mobile only */}
         <button
-          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg text-white md:hidden"
+          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg text-white lg:hidden"
           onClick={() => setSidebarOpen(false)}
           aria-label="사이드바 닫기"
         >
@@ -91,31 +119,32 @@ export function AppLayout({ clubId, children }: AppLayoutProps) {
         </button>
 
         <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--sidebar-active)] text-xs font-bold text-white">
-            동
-          </div>
-          <span className="text-sm font-bold text-white">동아리허브</span>
+          <BrandLogo className="h-7 w-7" variant="navigation" />
+          <span className="text-sm font-bold text-white">CrewCat</span>
         </div>
 
         <div className="my-4 h-px bg-[var(--sidebar-border)]" />
 
-        {club && (
-          <div className="rounded-xl bg-[var(--sidebar-info)] px-3 py-3">
-            <p className="text-xs font-bold leading-5 text-white">{club.name}</p>
-            <p className="text-[11px] text-[var(--sidebar-text)]">{roleLabel[club.role]}</p>
-          </div>
-        )}
+        <div className="min-h-[64px] rounded-xl bg-[var(--sidebar-info)] px-3 py-3">
+          {club && (
+            <>
+              <p className="text-xs font-bold leading-5 text-white">{club.name}</p>
+              <p className="text-[11px] text-[var(--sidebar-text)]">{roleLabel[club.role]}</p>
+            </>
+          )}
+        </div>
 
         <nav className="mt-4 flex flex-1 flex-col gap-1">
           {nav.map(item => {
             const active = "exact" in item && item.exact
               ? location.pathname === item.to
-              : location.pathname.startsWith(item.to);
+              : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
             return (
               <Link
                 key={item.to}
                 to={item.to}
                 onClick={() => setSidebarOpen(false)}
+                aria-current={active ? "page" : undefined}
                 className={`flex h-10 items-center rounded-lg px-3 text-sm transition-colors ${
                   active
                     ? "bg-[var(--sidebar-active)] font-bold text-white"
@@ -134,9 +163,19 @@ export function AppLayout({ clubId, children }: AppLayoutProps) {
 
         <div className="border-t border-[var(--sidebar-border)] pt-4">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--sidebar-active)] text-xs font-bold text-white">
-              {initials}
-            </div>
+            {showProfileImage ? (
+              <img
+                src={profileImageUrl}
+                alt=""
+                referrerPolicy="no-referrer"
+                onError={() => setFailedProfileImageUrl(profileImageUrl)}
+                className="h-8 w-8 shrink-0 rounded-full bg-white object-cover"
+              />
+            ) : (
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--sidebar-active)] text-xs font-bold text-white">
+                {initials}
+              </div>
+            )}
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-bold text-white">{user?.name}</p>
               <p className="truncate text-[10px] text-[var(--sidebar-text-muted)]">{user?.email}</p>
@@ -153,18 +192,18 @@ export function AppLayout({ clubId, children }: AppLayoutProps) {
       </aside>
 
       {/* Main content */}
-      <div className="flex flex-1 flex-col overflow-y-auto bg-[var(--surface)]">
+      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-[var(--surface)]">
         {/* Mobile top nav bar */}
-        <div className="flex items-center justify-between border-b border-[var(--border-subtle)] bg-white px-4 py-3 md:hidden">
+        <div className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--border-subtle)] bg-white px-4 py-3 lg:hidden">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--sidebar-active)] text-xs font-bold text-white">
-              동
-            </div>
-            <span className="text-sm font-bold text-[var(--navy)]">동아리허브</span>
+            <BrandLogo className="h-7 w-7" variant="navigation" />
+            <span className="text-sm font-bold text-[var(--navy)]">CrewCat</span>
           </div>
           <button
             onClick={() => setSidebarOpen(true)}
             aria-label="메뉴 열기"
+            aria-controls="app-sidebar"
+            aria-expanded={sidebarOpen}
             className="text-xl text-[var(--navy)]"
           >
             ☰
