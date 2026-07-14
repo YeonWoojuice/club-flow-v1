@@ -35,6 +35,12 @@ public class GlobalExceptionHandler {
         return new ErrorResponse("INVALID_REQUEST", exception.getMessage());
     }
 
+    @ExceptionHandler(ServiceUnavailableException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public ErrorResponse handleServiceUnavailable(ServiceUnavailableException exception) {
+        return new ErrorResponse("SERVICE_UNAVAILABLE", exception.getMessage());
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public ErrorResponse handleDataIntegrityViolation() {

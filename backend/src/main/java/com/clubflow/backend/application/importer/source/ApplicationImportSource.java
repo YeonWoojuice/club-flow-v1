@@ -53,6 +53,9 @@ public class ApplicationImportSource {
     @Column(name = "submitted_at_header", length = 255)
     private String submittedAtHeader;
 
+    @Column(name = "discord_name_header", length = 255)
+    private String discordNameHeader;
+
     @Column(name = "header_fingerprint", nullable = false, length = 64)
     private String headerFingerprint;
 
@@ -91,6 +94,7 @@ public class ApplicationImportSource {
         this.studentNumberHeader = values.studentNumberHeader().trim();
         this.phoneHeader = normalize(values.phoneHeader());
         this.submittedAtHeader = normalize(values.submittedAtHeader());
+        this.discordNameHeader = normalize(values.discordNameHeader());
         this.headerFingerprint = values.headerFingerprint();
     }
 
@@ -109,6 +113,7 @@ public class ApplicationImportSource {
     public String getStudentNumberHeader() { return studentNumberHeader; }
     public String getPhoneHeader() { return phoneHeader; }
     public String getSubmittedAtHeader() { return submittedAtHeader; }
+    public String getDiscordNameHeader() { return discordNameHeader; }
     public String getHeaderFingerprint() { return headerFingerprint; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
@@ -123,7 +128,23 @@ public class ApplicationImportSource {
             String studentNumberHeader,
             String phoneHeader,
             String submittedAtHeader,
+            String discordNameHeader,
             String headerFingerprint
     ) {
+        public SourceValues(
+                String displayName,
+                String spreadsheetId,
+                Long sheetId,
+                String sheetTitle,
+                String nameHeader,
+                String emailHeader,
+                String studentNumberHeader,
+                String phoneHeader,
+                String submittedAtHeader,
+                String headerFingerprint
+        ) {
+            this(displayName, spreadsheetId, sheetId, sheetTitle, nameHeader, emailHeader,
+                    studentNumberHeader, phoneHeader, submittedAtHeader, null, headerFingerprint);
+        }
     }
 }

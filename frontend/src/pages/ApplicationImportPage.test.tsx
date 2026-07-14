@@ -62,11 +62,11 @@ describe("ApplicationImportPage", () => {
       tables: [{
         sheetId: 0,
         name: "설문지 응답 1",
-        headers: ["이름", "이메일", "학번", "전화번호", "지원 동기"],
+        headers: ["이름", "이메일", "학번", "전화번호", "디스코드", "지원 동기"],
         rows: [
-          ["김지원", "apply@example.com", "20260001", "010-1234-5678", "함께 활동하고 싶습니다."],
-          ["중복1", "same@example.com", "20260002", "", "첫 번째"],
-          ["중복2", "SAME@example.com", "20260003", "", "두 번째"],
+          ["김지원", "apply@example.com", "20260001", "010-1234-5678", "crewcat_user", "함께 활동하고 싶습니다."],
+          ["중복1", "same@example.com", "20260002", "", "", "첫 번째"],
+          ["중복2", "SAME@example.com", "20260003", "", "", "두 번째"],
         ],
       }],
     });
@@ -121,6 +121,7 @@ describe("ApplicationImportPage", () => {
     fireEvent.change(screen.getByLabelText("이메일 (필수)"), { target: { value: "1" } });
     fireEvent.change(screen.getByLabelText("학번 (필수)"), { target: { value: "2" } });
     fireEvent.change(screen.getByLabelText("전화번호 (선택)"), { target: { value: "3" } });
+    fireEvent.change(screen.getByLabelText("디스코드 이름 (선택)"), { target: { value: "4" } });
     expect(screen.getByText(/나머지 1개 열/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("설정 이름"), { target: { value: "26-1 지원서" } });
     fireEvent.click(screen.getByRole("button", { name: "가져오기 설정 저장" }));
@@ -130,7 +131,12 @@ describe("ApplicationImportPage", () => {
         displayName: "26-1 지원서",
         spreadsheetId: "sheet-123",
         sheetId: 0,
-        mapping: expect.objectContaining({ nameHeader: "이름", emailHeader: "이메일", studentNumberHeader: "학번" }),
+        mapping: expect.objectContaining({
+          nameHeader: "이름",
+          emailHeader: "이메일",
+          studentNumberHeader: "학번",
+          discordNameHeader: "디스코드",
+        }),
       }),
     ));
     fireEvent.click(screen.getByRole("button", { name: "중복 확인하고 미리보기" }));
@@ -144,8 +150,9 @@ describe("ApplicationImportPage", () => {
           name: "김지원",
           email: "apply@example.com",
           studentNumber: "20260001",
+          discordName: "crewcat_user",
           answers: [{
-            questionKey: "sheet-column-5",
+            questionKey: "sheet-column-6",
             questionLabel: "지원 동기",
             answerValue: "함께 활동하고 싶습니다.",
           }],
@@ -229,6 +236,7 @@ describe("ApplicationImportPage", () => {
         studentNumberHeader: "학번",
         phoneHeader: "전화번호",
         submittedAtHeader: null,
+        discordNameHeader: null,
       },
       headerFingerprint: "fingerprint",
       createdAt: "2026-07-13T00:00:00Z",

@@ -20,6 +20,7 @@ export function ManualApplicationPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [discordName, setDiscordName] = useState("");
   const [studentNumber, setStudentNumber] = useState("");
   const [answers, setAnswers] = useState<AnswerInput[]>([
     { id: 1, questionLabel: "지원 동기", answerValue: "" },
@@ -61,6 +62,7 @@ export function ManualApplicationPage() {
         name,
         email: email.trim().toLowerCase(),
         phone: phone.trim() || undefined,
+        discordName: discordName.trim() || undefined,
         studentNumber,
         applicationAnswers: answers.map((answer, index) => ({
           questionKey: `manual_${index + 1}`,
@@ -159,6 +161,17 @@ export function ManualApplicationPage() {
                     className="control"
                     value={phone}
                     onChange={event => setPhone(event.target.value)}
+                  />
+                </label>
+                <label className="grid gap-1.5 text-xs font-bold">
+                  디스코드 이름{" "}
+                  <span className="font-normal text-[var(--text-tertiary)]">선택 · 결과 메일 변수에 사용</span>
+                  <input
+                    className="control"
+                    value={discordName}
+                    maxLength={100}
+                    onChange={event => setDiscordName(event.target.value)}
+                    placeholder="예: crewcat_user"
                   />
                 </label>
               </div>

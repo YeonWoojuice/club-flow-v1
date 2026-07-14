@@ -22,12 +22,13 @@ public class PersonService {
             String name,
             String email,
             String phone,
-            String studentNumber
+            String studentNumber,
+            String discordName
     ) {
         String normalizedEmail = normalizeEmail(email);
         return personRepository.findByClubIdAndEmail(club.getId(), normalizedEmail)
                 .map(person -> {
-                    person.updateProfile(name, phone, studentNumber);
+                    person.updateProfile(name, phone, studentNumber, discordName);
                     return person;
                 })
                 .orElseGet(() -> personRepository.save(Person.create(
@@ -35,8 +36,13 @@ public class PersonService {
                         name,
                         normalizedEmail,
                         phone,
-                        studentNumber
+                        studentNumber,
+                        discordName
                 )));
+    }
+
+    public Person findOrCreate(Club club, String name, String email, String phone, String studentNumber) {
+        return findOrCreate(club, name, email, phone, studentNumber, null);
     }
 
     private String normalizeEmail(String email) {

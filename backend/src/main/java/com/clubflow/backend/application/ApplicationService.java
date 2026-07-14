@@ -4,6 +4,7 @@ import com.clubflow.backend.application.dto.ApplicationAnswerRequest;
 import com.clubflow.backend.application.dto.ApplicationDetailResponse;
 import com.clubflow.backend.application.dto.ApplicationSummaryResponse;
 import com.clubflow.backend.application.dto.ManualApplicationRequest;
+import com.clubflow.backend.application.email.ApplicationResultEmailQueryService;
 import com.clubflow.backend.club.Club;
 import com.clubflow.backend.club.ClubAccessService;
 import com.clubflow.backend.common.ConflictException;
@@ -21,6 +22,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Map;
 
 @Service
 @Transactional(readOnly = true)
@@ -32,6 +34,7 @@ public class ApplicationService {
     private final GenerationService generationService;
     private final PersonService personService;
     private final GenerationMemberService generationMemberService;
+    private final ApplicationResultEmailQueryService resultEmailQueryService;
 
     public ApplicationService(
             ApplicationRepository applicationRepository,
@@ -39,7 +42,8 @@ public class ApplicationService {
             ClubAccessService clubAccessService,
             GenerationService generationService,
             PersonService personService,
-            GenerationMemberService generationMemberService
+            GenerationMemberService generationMemberService,
+            ApplicationResultEmailQueryService resultEmailQueryService
     ) {
         this.applicationRepository = applicationRepository;
         this.applicationAnswerRepository = applicationAnswerRepository;
@@ -47,13 +51,20 @@ public class ApplicationService {
         this.generationService = generationService;
         this.personService = personService;
         this.generationMemberService = generationMemberService;
+        this.resultEmailQueryService = resultEmailQueryService;
     }
 
     public List<ApplicationSummaryResponse> list(String googleSub, UUID clubId) {
         clubAccessService.requireAccessibleClub(googleSub, clubId);
-        return applicationRepository.findAllByClubId(clubId)
-                .stream()
-                .map(ApplicationSummaryResponse::from)
+        List<Application> applications = applicationRepository.findAllByClubId(clubId);
+        Map<UUID, ApplicationResultEmailQueryService.ResultEmailState> states = resultEmailQueryService.latestStates(
+                applications.stream().map(Application::getId).collect(java.util.stream.Collectors.toSet())
+        );
+        return applications.stream()
+                .map(application -> ApplicationSummaryResponse.from(
+                        application,
+                        states.getOrDefault(application.getId(), ApplicationResultEmailQueryService.ResultEmailState.notSent())
+                ))
                 .toList();
     }
 
@@ -74,7 +85,8 @@ public class ApplicationService {
                 request.name(),
                 request.email(),
                 request.phone(),
-                request.studentNumber()
+                request.studentNumber(),
+                request.discordName()
         );
         if (applicationRepository.existsByGenerationIdAndPersonId(generation.getId(), person.getId())) {
             throw new ConflictException("같은 학기에 이미 등록된 지원자가 있습니다.");
@@ -83,7 +95,10 @@ public class ApplicationService {
         Application application = applicationRepository.save(Application.createManual(generation, person));
         List<ApplicationAnswer> answers = createAnswers(application, request.applicationAnswers());
         applicationAnswerRepository.saveAll(answers);
-        return ApplicationDetailResponse.from(application, answers);
+        ApplicationResultEmailQueryService.ResultEmailState state = resultEmailQueryService.latestStates(
+                Set.of(application.getId())
+        ).getOrDefault(application.getId(), ApplicationResultEmailQueryService.ResultEmailState.notSent());
+        return ApplicationDetailResponse.from(application, answers, state);
     }
 
     public ApplicationDetailResponse get(String googleSub, UUID applicationId) {
@@ -125,7 +140,10 @@ public class ApplicationService {
     private ApplicationDetailResponse detail(Application application) {
         List<ApplicationAnswer> answers =
                 applicationAnswerRepository.findAllByApplicationIdOrderByDisplayOrderAsc(application.getId());
-        return ApplicationDetailResponse.from(application, answers);
+        ApplicationResultEmailQueryService.ResultEmailState state = resultEmailQueryService.latestStates(
+                Set.of(application.getId())
+        ).getOrDefault(application.getId(), ApplicationResultEmailQueryService.ResultEmailState.notSent());
+        return ApplicationDetailResponse.from(application, answers, state);
     }
 
     private List<ApplicationAnswer> createAnswers(

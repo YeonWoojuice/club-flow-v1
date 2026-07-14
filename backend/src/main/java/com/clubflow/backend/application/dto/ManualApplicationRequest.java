@@ -30,7 +30,20 @@ public record ManualApplicationRequest(
         @Size(max = 50, message = "학번은 50자 이하여야 합니다.")
         String studentNumber,
 
+        @Size(max = 100, message = "디스코드 이름은 100자 이하여야 합니다.")
+        String discordName,
+
         @NotEmpty(message = "지원서 답변을 하나 이상 입력해 주세요.")
         List<@Valid ApplicationAnswerRequest> applicationAnswers
 ) {
+    public ManualApplicationRequest(
+            UUID generationId,
+            String name,
+            String email,
+            String phone,
+            String studentNumber,
+            List<ApplicationAnswerRequest> applicationAnswers
+    ) {
+        this(generationId, name, email, phone, studentNumber, null, applicationAnswers);
+    }
 }

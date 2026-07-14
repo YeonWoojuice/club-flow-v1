@@ -39,6 +39,37 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
     @Query("""
             select application
             from Application application
+            join fetch application.generation generation
+            join fetch generation.club club
+            join fetch application.person person
+            where generation.id = :generationId
+              and application.status = :status
+            order by application.submittedAt asc
+            """)
+    List<Application> findAllByGenerationIdAndStatus(
+            @Param("generationId") UUID generationId,
+            @Param("status") ApplicationStatus status
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select application
+            from Application application
+            join fetch application.generation generation
+            join fetch generation.club club
+            join fetch application.person person
+            where generation.id = :generationId
+              and application.status = :status
+            order by application.submittedAt asc
+            """)
+    List<Application> findAllByGenerationIdAndStatusForUpdate(
+            @Param("generationId") UUID generationId,
+            @Param("status") ApplicationStatus status
+    );
+
+    @Query("""
+            select application
+            from Application application
             join fetch application.person person
             where application.generation.id = :generationId
               and person.id in :personIds

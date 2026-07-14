@@ -83,7 +83,7 @@ public class ApplicationImportService {
             if (row.status() != ApplicationImportRowStatus.READY) continue;
             Person person = row.person() == null
                     ? personRepository.save(Person.create(
-                            club, row.name(), row.email(), row.phone(), row.studentNumber()
+                            club, row.name(), row.email(), row.phone(), row.studentNumber(), row.discordName()
                     ))
                     : row.person();
             Application application = applicationRepository.save(Application.createFromGoogleForm(

@@ -111,7 +111,7 @@ public class ApplicationImportSourceService {
         ApplicationImportSourceMappingRequest mapping = request.mapping();
         List<String> mappedHeaders = Stream.of(
                         mapping.nameHeader(), mapping.emailHeader(), mapping.studentNumberHeader(),
-                        mapping.phoneHeader(), mapping.submittedAtHeader()
+                        mapping.phoneHeader(), mapping.submittedAtHeader(), mapping.discordNameHeader()
                 )
                 .filter(value -> value != null && !value.isBlank())
                 .map(String::trim)
@@ -124,10 +124,12 @@ public class ApplicationImportSourceService {
         requireHeader(headers, mapping.studentNumberHeader(), "학번");
         requireOptionalHeader(headers, mapping.phoneHeader(), "전화번호");
         requireOptionalHeader(headers, mapping.submittedAtHeader(), "제출일시");
+        requireOptionalHeader(headers, mapping.discordNameHeader(), "디스코드 이름");
         return new SourceValues(
                 request.displayName(), request.spreadsheetId(), request.sheetId(), request.sheetTitle(),
                 mapping.nameHeader(), mapping.emailHeader(), mapping.studentNumberHeader(),
-                mapping.phoneHeader(), mapping.submittedAtHeader(), headerFingerprint(headers)
+                mapping.phoneHeader(), mapping.submittedAtHeader(), mapping.discordNameHeader(),
+                headerFingerprint(headers)
         );
     }
 
@@ -165,7 +167,7 @@ public class ApplicationImportSourceService {
                 source.getSheetId(), source.getSheetTitle(),
                 new ApplicationImportSourceMappingResponse(
                         source.getNameHeader(), source.getEmailHeader(), source.getStudentNumberHeader(),
-                        source.getPhoneHeader(), source.getSubmittedAtHeader()
+                        source.getPhoneHeader(), source.getSubmittedAtHeader(), source.getDiscordNameHeader()
                 ),
                 source.getHeaderFingerprint(), source.getCreatedAt(), source.getUpdatedAt()
         );

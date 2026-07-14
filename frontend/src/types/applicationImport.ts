@@ -33,10 +33,11 @@ export type ApplicationImportWorkbook = ParsedWorkbook;
 
 export type ApplicationImportSourceMapping = Required<Omit<
   SourceMappingSchema,
-  "phoneHeader" | "submittedAtHeader"
+  "phoneHeader" | "submittedAtHeader" | "discordNameHeader"
 >> & {
   phoneHeader: string | null;
   submittedAtHeader: string | null;
+  discordNameHeader: string | null;
 };
 
 export type ApplicationImportSource = Required<Omit<SourceSchema, "mapping">> & {
@@ -50,6 +51,7 @@ export type ApplicationImportSourceInput = Omit<SourceInputSchema, "mapping"> & 
     studentNumberHeader: string;
     phoneHeader: string | null;
     submittedAtHeader: string | null;
+    discordNameHeader: string | null;
   };
 };
 

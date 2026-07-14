@@ -122,7 +122,49 @@ describe("MemberListPage", () => {
     fireEvent.change(await screen.findByLabelText("김부원 회비 상태"), { target: { value: "PAID" } });
 
     await waitFor(() => expect(changeGenerationMemberDuesStatus).toHaveBeenCalledWith("member-1", "PAID"));
-    expect(await screen.findByText(/회계 운영진/)).toBeInTheDocument();
+    const updatedDescription = await screen.findByText(/회계 운영진/);
+    expect(updatedDescription).toHaveClass("truncate", "whitespace-nowrap");
+    expect(updatedDescription).toHaveAttribute("title", expect.stringContaining("회계 운영진"));
+  });
+
+  it("1024px까지 카드형을 유지하고 1280px부터 헤더와 행에 같은 grid geometry를 적용한다", async () => {
+    renderPage();
+
+    const email = await screen.findByText("member@example.com");
+    const memberRow = email.parentElement?.parentElement;
+    const desktopHeader = screen.getByRole("button", { name: "상태" }).parentElement?.parentElement;
+    const mobileFilters = screen.getByLabelText("학번 필터").parentElement?.parentElement;
+
+    expect(memberRow).toHaveClass(
+      "gap-4",
+      "px-4",
+      "xl:grid-cols-[minmax(180px,1.6fr)_minmax(90px,0.8fr)_90px_80px_minmax(160px,1.2fr)_minmax(180px,1fr)]",
+      "xl:px-5",
+      "xl:items-start",
+    );
+    expect(memberRow).not.toHaveClass("lg:grid-cols-[minmax(180px,1.6fr)_minmax(90px,0.8fr)_90px_80px_minmax(160px,1.2fr)_minmax(180px,1fr)]");
+    expect(desktopHeader).toHaveClass(
+      "hidden",
+      "xl:grid",
+      "gap-4",
+      "px-4",
+      "xl:grid-cols-[minmax(180px,1.6fr)_minmax(90px,0.8fr)_90px_80px_minmax(160px,1.2fr)_minmax(180px,1fr)]",
+      "xl:px-5",
+    );
+    expect(mobileFilters).toHaveClass("xl:hidden");
+  });
+
+  it("긴 이메일을 한 줄로 줄이고 관리 버튼을 안정적인 두 칸으로 배치한다", async () => {
+    renderPage();
+
+    const email = await screen.findByText("member@example.com");
+    expect(email).toHaveClass("truncate");
+    expect(email).toHaveAttribute("title", "member@example.com");
+
+    const statusButton = screen.getByRole("button", { name: "상태 변경" });
+    expect(statusButton.parentElement).toHaveClass("grid", "grid-cols-2");
+    expect(statusButton).toHaveClass("w-full", "whitespace-nowrap");
+    expect(screen.getByRole("button", { name: "변경 이력" })).toHaveClass("w-full", "whitespace-nowrap");
   });
 
   it("활동 중 부원을 비활동으로 변경하고 해당 행을 갱신한다", async () => {

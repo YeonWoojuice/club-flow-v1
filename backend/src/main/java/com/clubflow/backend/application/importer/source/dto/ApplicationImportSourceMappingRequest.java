@@ -20,6 +20,18 @@ public record ApplicationImportSourceMappingRequest(
         String phoneHeader,
 
         @Size(max = 255, message = "제출일시 열 제목은 255자 이하여야 합니다.")
-        String submittedAtHeader
+        String submittedAtHeader,
+
+        @Size(max = 255, message = "디스코드 이름 열 제목은 255자 이하여야 합니다.")
+        String discordNameHeader
 ) {
+    public ApplicationImportSourceMappingRequest(
+            String nameHeader,
+            String emailHeader,
+            String studentNumberHeader,
+            String phoneHeader,
+            String submittedAtHeader
+    ) {
+        this(nameHeader, emailHeader, studentNumberHeader, phoneHeader, submittedAtHeader, null);
+    }
 }

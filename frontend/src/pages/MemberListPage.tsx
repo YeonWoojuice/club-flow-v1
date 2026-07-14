@@ -43,6 +43,8 @@ const duesStatusLabel: Record<GenerationMemberDuesStatus, string> = {
   EXEMPT: "면제",
 };
 
+const memberGridGeometry = "gap-4 px-4 xl:grid-cols-[minmax(180px,1.6fr)_minmax(90px,0.8fr)_90px_80px_minmax(160px,1.2fr)_minmax(180px,1fr)] xl:px-5";
+
 function StatusBadge({ status }: { status: GenerationMemberStatus }) {
   if (status === "ACTIVE") {
     return (
@@ -96,6 +98,9 @@ function MemberRow({ member, onUpdated }: MemberRowProps) {
 
   const formId = `member-status-form-${member.id}`;
   const historyId = `member-status-history-${member.id}`;
+  const duesUpdatedDescription = member.duesStatusUpdatedByName && member.duesStatusUpdatedAt
+    ? `${member.duesStatusUpdatedByName} · ${formatChangedAt(member.duesStatusUpdatedAt)}`
+    : null;
 
   async function loadHistory() {
     setHistoryLoading(true);
@@ -169,26 +174,26 @@ function MemberRow({ member, onUpdated }: MemberRowProps) {
 
   return (
     <article className="border-t border-[var(--border-subtle)] first:border-t-0">
-      <div className="grid gap-4 p-4 transition-colors hover:bg-[var(--panel-muted)] lg:grid-cols-[minmax(180px,1.6fr)_minmax(90px,0.8fr)_90px_80px_minmax(160px,1.2fr)_minmax(180px,1fr)] lg:items-center lg:px-5 lg:py-3.5">
+      <div className={`grid py-4 transition-colors hover:bg-[var(--panel-muted)] xl:items-start xl:py-3.5 ${memberGridGeometry}`}>
         <div className="min-w-0">
           <span className="block text-sm font-bold text-[var(--text-primary)]">{member.name}</span>
-          <span className="mt-0.5 block break-all text-xs text-[var(--text-secondary)]">{member.email}</span>
+          <span title={member.email} className="mt-0.5 block truncate text-xs text-[var(--text-secondary)]">{member.email}</span>
           <span className="mt-0.5 block text-[11px] text-[var(--text-secondary)]">학번 {member.studentNumber}</span>
         </div>
         <div>
-          <span className="mb-1 block text-[10px] font-bold text-[var(--text-secondary)] lg:hidden">학기</span>
+          <span className="mb-1 block text-[10px] font-bold text-[var(--text-secondary)] xl:hidden">학기</span>
           <span className="text-xs text-[var(--text-secondary)]">{member.generationName}</span>
         </div>
         <div>
-          <span className="mb-1 block text-[10px] font-bold text-[var(--text-secondary)] lg:hidden">가입 경로</span>
+          <span className="mb-1 block text-[10px] font-bold text-[var(--text-secondary)] xl:hidden">가입 경로</span>
           <span className="text-xs text-[var(--text-secondary)]">{sourceLabel[member.joinedSource]}</span>
         </div>
         <div>
-          <span className="mb-1 block text-[10px] font-bold text-[var(--text-secondary)] lg:hidden">상태</span>
+          <span className="mb-1 block text-[10px] font-bold text-[var(--text-secondary)] xl:hidden">상태</span>
           <StatusBadge status={member.status} />
         </div>
-        <div>
-          <span className="mb-1 block text-[10px] font-bold text-[var(--text-secondary)] lg:hidden">회비 확인</span>
+        <div className="min-w-0">
+          <span className="mb-1 block text-[10px] font-bold text-[var(--text-secondary)] xl:hidden">회비 확인</span>
           <label className="grid min-w-24 gap-1 text-[10px] font-bold text-[var(--text-secondary)]">
             <span className="sr-only">{member.name} 회비 상태</span>
             <select
@@ -203,23 +208,23 @@ function MemberRow({ member, onUpdated }: MemberRowProps) {
               ))}
             </select>
           </label>
-          {member.duesStatusUpdatedByName && member.duesStatusUpdatedAt && (
-            <p className="mt-1 text-[10px] text-[var(--text-secondary)]">
-              {member.duesStatusUpdatedByName} · {formatChangedAt(member.duesStatusUpdatedAt)}
+          {duesUpdatedDescription && (
+            <p title={duesUpdatedDescription} className="mt-1 truncate whitespace-nowrap text-[10px] text-[var(--text-secondary)]">
+              {duesUpdatedDescription}
             </p>
           )}
           {duesError && <p role="alert" className="mt-1 text-[10px] font-bold text-[var(--danger)]">{duesError}</p>}
         </div>
         <div>
-          <span className="mb-1 block text-[10px] font-bold text-[var(--text-secondary)] lg:hidden">관리</span>
-          <div className="flex flex-wrap gap-2">
+          <span className="mb-1 block text-[10px] font-bold text-[var(--text-secondary)] xl:hidden">관리</span>
+          <div className="grid grid-cols-2 gap-2">
             {member.status !== "WITHDRAWN" && (
               <button
                 type="button"
                 onClick={toggleForm}
                 aria-expanded={formOpen}
                 aria-controls={formId}
-                className="rounded-lg border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-bold text-[var(--text-primary)] hover:bg-[var(--panel-muted)]"
+                className="w-full whitespace-nowrap rounded-lg border border-[var(--border-subtle)] px-2 py-1.5 text-xs font-bold text-[var(--text-primary)] hover:bg-[var(--panel-muted)]"
               >
                 {formOpen ? "변경 닫기" : "상태 변경"}
               </button>
@@ -229,7 +234,7 @@ function MemberRow({ member, onUpdated }: MemberRowProps) {
               onClick={toggleHistory}
               aria-expanded={historyOpen}
               aria-controls={historyId}
-              className="rounded-lg border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-bold text-[var(--text-secondary)] hover:bg-[var(--panel-muted)]"
+              className="w-full whitespace-nowrap rounded-lg border border-[var(--border-subtle)] px-2 py-1.5 text-xs font-bold text-[var(--text-secondary)] hover:bg-[var(--panel-muted)]"
             >
               {historyOpen ? "이력 닫기" : "변경 이력"}
             </button>
@@ -290,7 +295,7 @@ function MemberRow({ member, onUpdated }: MemberRowProps) {
                       <button
                         type="submit"
                         disabled={submitting}
-                        className="rounded-lg bg-[var(--brand)] px-3 py-2 text-xs font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        className="rounded-lg bg-[var(--navy)] px-3 py-2 text-xs font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {submitting ? "변경 중..." : statusActionLabel[targetStatus]}
                       </button>
@@ -304,7 +309,7 @@ function MemberRow({ member, onUpdated }: MemberRowProps) {
                   <div className="flex items-center justify-between gap-3">
                     <h3 className="text-sm font-extrabold text-[var(--text-primary)]">상태 변경 이력</h3>
                     {historyError && (
-                      <button type="button" onClick={loadHistory} className="text-xs font-bold text-[var(--brand)]">
+                      <button type="button" onClick={loadHistory} className="text-xs font-bold text-[var(--navy)]">
                         다시 시도
                       </button>
                     )}
@@ -356,7 +361,7 @@ type FilterHeaderProps = {
 
 function FilterHeader({ label, applied, open, onToggle, children }: FilterHeaderProps) {
   return (
-    <div className={`relative px-5 py-3 ${applied ? "bg-[var(--panel-muted)]" : "bg-white"}`}>
+    <div className={`relative py-3 ${applied ? "bg-[var(--panel-muted)]" : "bg-white"}`}>
       <button
         type="button"
         aria-expanded={open}
@@ -523,7 +528,7 @@ export function MemberListPage() {
         </div>
 
         {members.length > 0 && (
-          <div className="mb-4 grid gap-3 rounded-xl border border-[var(--border-subtle)] bg-white p-4 lg:hidden sm:grid-cols-3">
+          <div className="mb-4 grid gap-3 rounded-xl border border-[var(--border-subtle)] bg-white p-4 xl:hidden sm:grid-cols-3">
             <label className="grid gap-1.5 text-xs font-bold">
               학번 필터
               <input className="control" value={studentNumberFilter} onChange={event => setStudentNumberFilter(event.target.value)} placeholder="학번 입력" />
@@ -570,7 +575,7 @@ export function MemberListPage() {
         {!loading && !error && members.length > 0 && filteredMembers.length === 0 && (
           <div className="rounded-xl border border-[var(--border-subtle)] bg-white p-8 text-center">
             <p className="text-sm text-[var(--text-secondary)]">필터 조건에 맞는 부원이 없습니다.</p>
-            <button type="button" onClick={() => { setStudentNumberFilter(""); setStatusFilter("ALL"); setDuesFilter("ALL"); setOpenFilter(null); }} className="mt-3 text-xs font-bold text-[var(--brand)] underline">
+            <button type="button" onClick={() => { setStudentNumberFilter(""); setStatusFilter("ALL"); setDuesFilter("ALL"); setOpenFilter(null); }} className="mt-3 text-xs font-bold text-[var(--navy)] underline">
               필터 초기화
             </button>
           </div>
@@ -578,15 +583,15 @@ export function MemberListPage() {
 
         {!loading && !error && filteredMembers.length > 0 && (
           <div className="rounded-xl border border-[var(--border-subtle)] bg-white">
-            <div className="relative z-20 hidden border-b border-[var(--border-subtle)] lg:grid lg:grid-cols-[minmax(180px,1.6fr)_minmax(90px,0.8fr)_90px_80px_minmax(160px,1.2fr)_minmax(180px,1fr)]">
+            <div className={`relative z-20 hidden border-b border-[var(--border-subtle)] xl:grid ${memberGridGeometry}`}>
               <FilterHeader label="이름/이메일/학번" applied={normalizedStudentNumber !== ""} open={openFilter === "studentNumber"} onToggle={() => setOpenFilter(current => current === "studentNumber" ? null : "studentNumber")}>
                 <label className="grid gap-1.5 text-xs font-bold text-[var(--text-primary)]">
                   학번
                   <input autoFocus aria-label="표 학번 필터" className="control" value={studentNumberFilter} onChange={event => setStudentNumberFilter(event.target.value)} placeholder="학번 입력" />
                 </label>
               </FilterHeader>
-              <span className="px-5 py-3 text-xs font-extrabold text-[var(--text-secondary)]">학기</span>
-              <span className="px-5 py-3 text-xs font-extrabold text-[var(--text-secondary)]">가입 경로</span>
+              <span className="py-3 text-xs font-extrabold text-[var(--text-secondary)]">학기</span>
+              <span className="py-3 text-xs font-extrabold text-[var(--text-secondary)]">가입 경로</span>
               <FilterHeader label="상태" applied={statusFilter !== "ALL"} open={openFilter === "status"} onToggle={() => setOpenFilter(current => current === "status" ? null : "status")}>
                 <label className="grid gap-1.5 text-xs font-bold text-[var(--text-primary)]">
                   상태
@@ -605,7 +610,7 @@ export function MemberListPage() {
                   </select>
                 </label>
               </FilterHeader>
-              <span className="px-5 py-3 text-xs font-extrabold text-[var(--text-secondary)]">관리</span>
+              <span className="py-3 text-xs font-extrabold text-[var(--text-secondary)]">관리</span>
             </div>
             {filteredMembers.map(member => (
               <MemberRow key={member.id} member={member} onUpdated={handleMemberUpdated} />

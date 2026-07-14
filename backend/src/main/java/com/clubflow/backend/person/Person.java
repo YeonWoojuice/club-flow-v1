@@ -38,6 +38,9 @@ public class Person {
     @Column(name = "student_number", nullable = false, length = 50)
     private String studentNumber;
 
+    @Column(name = "discord_name", length = 100)
+    private String discordName;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -47,13 +50,14 @@ public class Person {
     protected Person() {
     }
 
-    private Person(Club club, String name, String email, String phone, String studentNumber) {
+    private Person(Club club, String name, String email, String phone, String studentNumber, String discordName) {
         Instant now = Instant.now();
         this.club = club;
         this.name = name.trim();
         this.email = email;
         this.phone = normalizeNullable(phone);
         this.studentNumber = studentNumber.trim();
+        this.discordName = normalizeNullable(discordName);
         this.createdAt = now;
         this.updatedAt = now;
     }
@@ -63,15 +67,21 @@ public class Person {
             String name,
             String email,
             String phone,
-            String studentNumber
+            String studentNumber,
+            String discordName
     ) {
-        return new Person(club, name, email, phone, studentNumber);
+        return new Person(club, name, email, phone, studentNumber, discordName);
     }
 
-    public void updateProfile(String name, String phone, String studentNumber) {
+    public static Person create(Club club, String name, String email, String phone, String studentNumber) {
+        return create(club, name, email, phone, studentNumber, null);
+    }
+
+    public void updateProfile(String name, String phone, String studentNumber, String discordName) {
         this.name = name.trim();
         this.phone = normalizeNullable(phone);
         this.studentNumber = studentNumber.trim();
+        this.discordName = normalizeNullable(discordName);
         this.updatedAt = Instant.now();
     }
 
@@ -101,6 +111,10 @@ public class Person {
 
     public String getStudentNumber() {
         return studentNumber;
+    }
+
+    public String getDiscordName() {
+        return discordName;
     }
 
     public Instant getCreatedAt() {

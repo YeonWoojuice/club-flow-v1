@@ -43,6 +43,11 @@ app:
     client-secret: ${GOOGLE_DATA_CLIENT_SECRET:}
     redirect-uri: ${GOOGLE_DATA_REDIRECT_URI:http://localhost:8080/api/google-data/oauth/callback}
     encryption-key: ${GOOGLE_TOKEN_ENCRYPTION_KEY:}
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+    api-base: ${RESEND_API_BASE:https://api.resend.com}
+    api-key: ${RESEND_API_KEY:}
+    from: ${MAIL_FROM:}
 
 springdoc:
   paths-to-match: /api/**

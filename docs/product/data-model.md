@@ -131,11 +131,13 @@ generations 1 ── N applications N ── 1 persons
 | email | VARCHAR(255) | NOT NULL, 소문자 저장 |
 | phone | VARCHAR(30) | NULL 허용 |
 | student_number | VARCHAR(50) | NOT NULL |
+| discord_name | VARCHAR(100) | NULL 허용 |
 | created_at | TIMESTAMPTZ | NOT NULL |
 | updated_at | TIMESTAMPTZ | NOT NULL |
 
 - 지원자와 부원은 같은 `persons` 정보를 참조한다.
 - `UNIQUE(club_id, email)`로 동아리 안의 중복 인물을 방지한다.
+- `discord_name`은 결과 메일의 선택 템플릿 변수에 사용하며, 없으면 해당 변수를 사용한 수신자는 전송 대상에서 제외한다.
 
 ## applications
 
@@ -170,6 +172,37 @@ generations 1 ── N applications N ── 1 persons
 
 - `UNIQUE(application_id, question_key)`로 같은 지원서의 문항 중복을 방지한다.
 - `answer_value`와 `answer_json` 중 하나는 반드시 존재해야 한다.
+
+## application_result_email_batches
+
+| 컬럼 | 설명 |
+|---|---|
+| club_id / generation_id | 전송한 동아리와 학기 |
+| requested_by_user_id | 전송을 요청한 운영진 |
+| decision | ACCEPTED 또는 REJECTED |
+| status | PENDING, COMPLETED, PARTIAL_FAILED, FAILED, UNKNOWN |
+| subject_template / body_template | 전송 당시의 공통 템플릿 |
+| kakao_link | 전송 당시의 선택 링크 |
+
+- 한 번의 일괄 전송 요청을 나타내며, 100명을 넘으면 외부 메일 제공자 요청만 여러 묶음으로 나눈다.
+
+## application_result_email_messages
+
+| 컬럼 | 설명 |
+|---|---|
+| batch_id / application_id | 전송 묶음과 지원서 |
+| status | PENDING, SENT, FAILED, UNKNOWN |
+| recipient_email_snapshot | 전송 당시 수신 주소 |
+| member_name_snapshot / discord_name_snapshot | 변수 치환 당시 인물 정보 |
+| club_name_snapshot / kakao_link_snapshot | 변수 치환 당시 동아리·링크 정보 |
+| subject_snapshot / body_snapshot | 실제로 외부 제공자에 전달한 내용 |
+| idempotency_key | 같은 외부 요청의 반복 처리를 막는 키 |
+| provider_message_id / error_message | 제공자 접수 ID 또는 실패 정보 |
+| sent_at | 외부 제공자가 요청을 접수한 시각 |
+
+- `SENT`는 수신함 도착이나 열람이 아니라 외부 제공자가 전송 요청을 정상 접수했다는 뜻이다.
+- 한 지원서에 `PENDING`, `SENT`, `UNKNOWN` 결과가 둘 이상 생기지 않게 DB 제약으로 막는다.
+- `FAILED`만 재시도할 수 있고, `UNKNOWN`은 실제 발송 여부가 불분명하므로 자동 재시도하지 않는다.
 
 ## generation_members
 

@@ -1,15 +1,18 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { changeApplicationStatus, listApplications } from "../api/applications";
 import { listGenerations } from "../api/generations";
 import { apiErrorMessage } from "../api/http";
 import { AppLayout } from "../components/AppLayout";
+import { ApplicationResultEmailModal } from "../components/ApplicationResultEmailModal";
+import { ApplicationResultStatus } from "../components/ApplicationResultStatus";
 import type {
   ApplicationSourceType,
   ApplicationStatus,
   ApplicationSummary,
 } from "../types/application";
 import type { Generation } from "../types/generation";
+import type { ApplicationResultEmailDecision } from "../types/applicationResultEmail";
 
 type SourceFilter = ApplicationSourceType | "ALL";
 type StatusFilter = ApplicationStatus | "ALL";
@@ -29,14 +32,6 @@ const statusTabs: { value: StatusFilter; label: string }[] = [
   { value: "CANCELED", label: "취소" },
 ];
 
-const statusConfig: Record<ApplicationStatus, { label: string; cls: string }> = {
-  SUBMITTED: { label: "접수", cls: "bg-blue-50 text-blue-700" },
-  REVIEWING: { label: "검토 중", cls: "bg-[var(--warning-soft)] text-[var(--warning)]" },
-  ACCEPTED: { label: "합격", cls: "bg-[var(--success-soft)] text-[var(--success)]" },
-  REJECTED: { label: "불합격", cls: "bg-[var(--danger-soft)] text-[var(--danger)]" },
-  CANCELED: { label: "취소", cls: "bg-[var(--panel-muted)] text-[var(--text-secondary)]" },
-};
-
 export function ApplicationListPage() {
   const { clubId = "" } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -54,6 +49,13 @@ export function ApplicationListPage() {
   const [bulkAccepting, setBulkAccepting] = useState(false);
   const [bulkMessage, setBulkMessage] = useState("");
   const [bulkSetupError, setBulkSetupError] = useState("");
+  const [resultEmailDecision, setResultEmailDecision] = useState<ApplicationResultEmailDecision | null>(null);
+  const acceptedEmailButtonRef = useRef<HTMLButtonElement>(null);
+  const rejectedEmailButtonRef = useRef<HTMLButtonElement>(null);
+
+  const reloadApplications = useCallback(async () => {
+    setApplications(await listApplications(clubId));
+  }, [clubId]);
 
   useEffect(() => {
     listApplications(clubId)
@@ -87,6 +89,7 @@ export function ApplicationListPage() {
     setSourceFilter("ALL");
     setStatusFilter("ALL");
     setBulkConfirmOpen(false);
+    setResultEmailDecision(null);
     setBulkMessage("");
     setSearchParams(current => {
       const next = new URLSearchParams(current);
@@ -135,6 +138,31 @@ export function ApplicationListPage() {
     return true;
   });
   const pageLoading = loading || generationsLoading;
+  const generationApplications = applications.filter(application => application.generationId === generationId);
+  const emailTargets = (decision: ApplicationResultEmailDecision) => generationApplications.filter(application =>
+    application.status === decision
+    && (application.resultEmailStatus === "NOT_SENT" || application.resultEmailStatus === "FAILED"),
+  );
+  const emailRetryCount = (decision: ApplicationResultEmailDecision) => generationApplications.filter(application =>
+    application.status === decision && application.resultEmailStatus === "FAILED",
+  ).length;
+  const emailUnknownCount = (decision: ApplicationResultEmailDecision) => generationApplications.filter(application =>
+    application.status === decision
+    && (!application.resultEmailStatus || application.resultEmailStatus === "UNKNOWN"),
+  ).length;
+  const emailExcludedCount = (decision: ApplicationResultEmailDecision) => generationApplications.filter(application =>
+    application.status === decision,
+  ).length - emailTargets(decision).length;
+  const acceptedEmailTargets = emailTargets("ACCEPTED");
+  const rejectedEmailTargets = emailTargets("REJECTED");
+
+  const refreshAfterEmailSend = async () => {
+    try {
+      await reloadApplications();
+    } catch (requestError) {
+      setError(apiErrorMessage(requestError, "메일 전송 결과를 반영한 지원자 목록을 불러오지 못했습니다."));
+    }
+  };
 
   return (
     <AppLayout clubId={clubId}>
@@ -192,6 +220,34 @@ export function ApplicationListPage() {
           </label>
           <p className="mt-2 text-xs text-[var(--text-secondary)]">선택한 학기의 지원자만 표시합니다.</p>
         </div>
+        <section className="mb-5 rounded-xl border border-[var(--border-subtle)] bg-white p-4" aria-labelledby="result-email-actions-title">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 id="result-email-actions-title" className="text-sm font-extrabold text-[var(--text-primary)]">결과 메일 일괄 전송</h2>
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">선택한 학기의 미발송·실패 대상만 포함하며, 발송 중이거나 결과 확인이 필요한 대상은 제외합니다.</p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button
+                ref={acceptedEmailButtonRef}
+                type="button"
+                disabled={pageLoading || acceptedEmailTargets.length === 0}
+                onClick={() => setResultEmailDecision("ACCEPTED")}
+                className="rounded-lg bg-[var(--success)] px-4 py-2.5 text-xs font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                합격 메일 일괄 전송 ({acceptedEmailTargets.length})
+              </button>
+              <button
+                ref={rejectedEmailButtonRef}
+                type="button"
+                disabled={pageLoading || rejectedEmailTargets.length === 0}
+                onClick={() => setResultEmailDecision("REJECTED")}
+                className="rounded-lg border border-[var(--danger)] px-4 py-2.5 text-xs font-extrabold text-[var(--danger)] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                불합격 메일 일괄 전송 ({rejectedEmailTargets.length})
+              </button>
+            </div>
+          </div>
+        </section>
         <div className="mb-4 flex flex-col gap-2 md:mb-6 md:flex-row md:flex-wrap md:items-center md:gap-3">
           <div className="overflow-x-auto">
             <div className="flex w-max overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-white">
@@ -258,9 +314,7 @@ export function ApplicationListPage() {
                       <b className="block text-sm">{app.name}</b>
                       <span className="mt-0.5 block truncate text-xs text-[var(--text-secondary)]">{app.email}</span>
                     </div>
-                    <span className={`shrink-0 rounded-md px-2 py-1 text-[10px] font-bold ${statusConfig[app.status].cls}`}>
-                      {statusConfig[app.status].label}
-                    </span>
+                    <ApplicationResultStatus status={app.status} emailStatus={app.resultEmailStatus} />
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--text-secondary)]">
                     <span>{app.generationName}</span>
@@ -279,7 +333,7 @@ export function ApplicationListPage() {
 
             {/* Desktop: grid table */}
             <div className="hidden overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-white md:block">
-              <div className="grid grid-cols-[1fr_140px_130px_110px_100px] border-b border-[var(--border-subtle)] px-5 py-3">
+              <div className="grid grid-cols-[1fr_120px_110px_100px_180px] border-b border-[var(--border-subtle)] px-5 py-3">
                 <span className="text-xs font-bold text-[var(--text-secondary)]">이름 / 이메일</span>
                 <span className="text-xs font-bold text-[var(--text-secondary)]">학기</span>
                 <span className="text-xs font-bold text-[var(--text-secondary)]">제출일</span>
@@ -290,7 +344,7 @@ export function ApplicationListPage() {
                 <Link
                   key={app.id}
                   to={`/clubs/${clubId}/applications/${app.id}`}
-                  className="grid grid-cols-[1fr_140px_130px_110px_100px] items-center border-b border-[var(--border-subtle)] px-5 py-4 last:border-0 transition-colors hover:bg-[var(--panel-muted)]"
+                  className="grid grid-cols-[1fr_120px_110px_100px_180px] items-center border-b border-[var(--border-subtle)] px-5 py-4 last:border-0 transition-colors hover:bg-[var(--panel-muted)]"
                 >
                   <span>
                     <b className="block text-sm">{app.name}</b>
@@ -312,9 +366,7 @@ export function ApplicationListPage() {
                     )}
                   </span>
                   <span>
-                    <span className={`inline-block rounded-md px-2 py-1 text-[10px] font-bold ${statusConfig[app.status].cls}`}>
-                      {statusConfig[app.status].label}
-                    </span>
+                    <ApplicationResultStatus status={app.status} emailStatus={app.resultEmailStatus} />
                   </span>
                 </Link>
               ))}
@@ -351,6 +403,21 @@ export function ApplicationListPage() {
         <div role="status" aria-live="polite" className="fixed bottom-4 right-4 z-50 max-w-sm rounded-xl bg-[var(--success)] px-4 py-3 text-xs font-bold text-white shadow-lg">
           {bulkMessage}
         </div>
+      )}
+      {resultEmailDecision && selectedGeneration && (
+        <ApplicationResultEmailModal
+          clubId={clubId}
+          generationId={selectedGeneration.id}
+          generationName={selectedGeneration.name}
+          decision={resultEmailDecision}
+          eligibleCount={emailTargets(resultEmailDecision).length}
+          excludedCount={emailExcludedCount(resultEmailDecision)}
+          retryCount={emailRetryCount(resultEmailDecision)}
+          unknownCount={emailUnknownCount(resultEmailDecision)}
+          returnFocusRef={resultEmailDecision === "ACCEPTED" ? acceptedEmailButtonRef : rejectedEmailButtonRef}
+          onClose={() => setResultEmailDecision(null)}
+          onCompleted={refreshAfterEmailSend}
+        />
       )}
     </AppLayout>
   );
