@@ -25,6 +25,50 @@ interface AppLayoutProps {
   children: React.ReactNode;
 }
 
+type NavigationItem = {
+  label: string;
+  to: string;
+  exact?: boolean;
+};
+
+function NavigationLinks({
+  items,
+  pathname,
+  direction,
+}: {
+  items: NavigationItem[];
+  pathname: string;
+  direction: "vertical" | "horizontal";
+}) {
+  return items.map(item => {
+    const active = item.exact
+      ? pathname === item.to
+      : pathname === item.to || pathname.startsWith(`${item.to}/`);
+    const horizontal = direction === "horizontal";
+
+    return (
+      <Link
+        key={item.to}
+        to={item.to}
+        aria-current={active ? "page" : undefined}
+        className={`flex h-10 items-center rounded-lg text-sm transition-colors ${
+          horizontal ? "shrink-0 px-3" : "px-3"
+        } ${
+          active
+            ? horizontal
+              ? "bg-[var(--navy)] font-bold text-white"
+              : "bg-[var(--sidebar-active)] font-bold text-white"
+            : horizontal
+              ? "text-[var(--text-secondary)] hover:bg-[var(--panel-muted)] hover:text-[var(--text-primary)]"
+              : "text-[var(--sidebar-text)] hover:text-white"
+        }`}
+      >
+        {item.label}
+      </Link>
+    );
+  });
+}
+
 export function AppLayout({ clubId, children }: AppLayoutProps) {
   const { user, clear } = useAuth();
   const location = useLocation();
@@ -36,7 +80,6 @@ export function AppLayout({ clubId, children }: AppLayoutProps) {
   const [failedProfileImageUrl, setFailedProfileImageUrl] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -78,7 +121,7 @@ export function AppLayout({ clubId, children }: AppLayoutProps) {
     }
   };
 
-  const nav = [
+  const nav: NavigationItem[] = [
     { label: "대시보드", to: `/clubs/${clubId}/dashboard` },
     { label: "학기/기수", to: `/clubs/${clubId}/generations` },
     { label: "지원자 관리", to: `/clubs/${clubId}/applications` },
@@ -94,30 +137,11 @@ export function AppLayout({ clubId, children }: AppLayoutProps) {
 
   return (
     <div className="flex h-dvh min-w-0 overflow-hidden font-body">
-      {/* Mobile backdrop */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
       {/* Sidebar */}
       <aside
         id="app-sidebar"
-        className={`fixed inset-y-0 left-0 z-50 flex h-full w-[min(15rem,calc(100vw-3rem))] shrink-0 flex-col bg-[var(--sidebar-bg)] px-5 py-6 transition-transform lg:relative lg:w-60 lg:translate-x-0 lg:transition-none ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className="hidden h-full w-60 shrink-0 flex-col bg-[var(--sidebar-bg)] px-5 py-6 lg:flex"
       >
-        {/* Close button — mobile only */}
-        <button
-          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg text-white lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-          aria-label="사이드바 닫기"
-        >
-          ✕
-        </button>
-
         <div className="flex items-center gap-2.5">
           <BrandLogo className="h-7 w-7" variant="navigation" />
           <span className="text-sm font-bold text-white">CrewCat</span>
@@ -134,31 +158,8 @@ export function AppLayout({ clubId, children }: AppLayoutProps) {
           )}
         </div>
 
-        <nav className="mt-4 flex flex-1 flex-col gap-1">
-          {nav.map(item => {
-            const active = "exact" in item && item.exact
-              ? location.pathname === item.to
-              : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                onClick={() => setSidebarOpen(false)}
-                aria-current={active ? "page" : undefined}
-                className={`flex h-10 items-center rounded-lg px-3 text-sm transition-colors ${
-                  active
-                    ? "bg-[var(--sidebar-active)] font-bold text-white"
-                    : "text-[var(--sidebar-text)] hover:text-white"
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-          {/* TODO: 폼 연동 – API 미제공 */}
-          <span className="flex h-10 cursor-not-allowed items-center rounded-lg px-3 text-sm text-[var(--sidebar-text-muted)] opacity-50">
-            폼 연동
-          </span>
+        <nav aria-label="사이드 메뉴" className="mt-4 flex flex-1 flex-col gap-1">
+          <NavigationLinks items={nav} pathname={location.pathname} direction="vertical" />
         </nav>
 
         <div className="border-t border-[var(--sidebar-border)] pt-4">
@@ -193,22 +194,46 @@ export function AppLayout({ clubId, children }: AppLayoutProps) {
 
       {/* Main content */}
       <div className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-[var(--surface)]">
-        {/* Mobile top nav bar */}
-        <div className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--border-subtle)] bg-white px-4 py-3 lg:hidden">
-          <div className="flex items-center gap-2.5">
-            <BrandLogo className="h-7 w-7" variant="navigation" />
-            <span className="text-sm font-bold text-[var(--navy)]">CrewCat</span>
+        {/* Narrow-screen top navigation */}
+        <header data-testid="mobile-top-navigation" className="sticky top-0 z-30 shrink-0 border-b border-[var(--border-subtle)] bg-white lg:hidden">
+          <div className="flex h-14 items-center justify-between gap-3 px-4">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <BrandLogo className="h-7 w-7 shrink-0" variant="navigation" />
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-[var(--navy)]">CrewCat</p>
+                {club && <p className="truncate text-[10px] text-[var(--text-secondary)]">{club.name}</p>}
+              </div>
+            </div>
+            <div className="flex min-w-0 items-center gap-2.5">
+              {showProfileImage ? (
+                <img
+                  src={profileImageUrl}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  onError={() => setFailedProfileImageUrl(profileImageUrl)}
+                  className="h-7 w-7 shrink-0 rounded-full bg-white object-cover"
+                />
+              ) : (
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--navy)] text-[10px] font-bold text-white">
+                  {initials}
+                </div>
+              )}
+              <span className="hidden max-w-24 truncate text-xs font-bold text-[var(--text-primary)] sm:block">{user?.name}</span>
+              <button
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="shrink-0 text-[10px] font-bold text-[var(--text-secondary)] transition-colors hover:text-[var(--navy)] disabled:opacity-50"
+              >
+                {loggingOut ? "처리 중" : "나가기"}
+              </button>
+            </div>
           </div>
-          <button
-            onClick={() => setSidebarOpen(true)}
-            aria-label="메뉴 열기"
-            aria-controls="app-sidebar"
-            aria-expanded={sidebarOpen}
-            className="text-xl text-[var(--navy)]"
-          >
-            ☰
-          </button>
-        </div>
+          <nav aria-label="상단 메뉴" className="overflow-x-auto border-t border-[var(--border-subtle)] px-2 [scrollbar-width:none]">
+            <div className="flex min-w-max gap-1 py-1">
+              <NavigationLinks items={nav} pathname={location.pathname} direction="horizontal" />
+            </div>
+          </nav>
+        </header>
 
         {children}
       </div>

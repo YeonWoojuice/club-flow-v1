@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppLayout } from "./AppLayout";
@@ -62,7 +62,7 @@ describe("AppLayout 로그아웃", () => {
 
     fireEvent.error(profileImage!);
 
-    expect(screen.getByText("회")).toBeInTheDocument();
+    expect(screen.getAllByText("회")).toHaveLength(2);
     expect(profileImage).not.toBeInTheDocument();
   });
 
@@ -72,7 +72,7 @@ describe("AppLayout 로그아웃", () => {
         <AppLayout clubId="club-1"><div>첫 화면</div></AppLayout>
       </MemoryRouter>,
     );
-    expect(await screen.findByText("ClubFlow")).toBeInTheDocument();
+    expect((await screen.findAllByText("ClubFlow")).length).toBeGreaterThan(0);
     firstRender.unmount();
 
     getClub.mockReturnValueOnce(new Promise(() => undefined));
@@ -82,8 +82,8 @@ describe("AppLayout 로그아웃", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("ClubFlow")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "운영진 관리" })).toBeInTheDocument();
+    expect(screen.getAllByText("ClubFlow").length).toBeGreaterThan(0);
+    expect(within(document.getElementById("app-sidebar")!).getByRole("link", { name: "운영진 관리" })).toBeInTheDocument();
   });
 
   it("로그아웃 요청이 실패하면 현재 인증 상태를 유지하고 에러 토스트를 표시한다", async () => {
@@ -95,7 +95,7 @@ describe("AppLayout 로그아웃", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "나가기" }));
+    fireEvent.click(within(document.getElementById("app-sidebar")!).getByRole("button", { name: "나가기" }));
 
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("로그아웃에 실패했습니다"));
     expect(clear).not.toHaveBeenCalled();
@@ -111,8 +111,10 @@ describe("AppLayout 로그아웃", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("link", { name: "받은 초대" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "운영진 관리" })).not.toBeInTheDocument();
+    const sidebar = document.getElementById("app-sidebar")!;
+    await waitFor(() => expect(within(sidebar).getByRole("link", { name: "받은 초대" })).toBeInTheDocument());
+    expect(within(sidebar).queryByRole("link", { name: "운영진 관리" })).not.toBeInTheDocument();
+    expect(screen.queryByText("폼 연동")).not.toBeInTheDocument();
   });
 
   it("받은 초대 경로에서는 해당 메뉴만 현재 페이지로 표시한다", async () => {
@@ -122,34 +124,29 @@ describe("AppLayout 로그아웃", () => {
       </MemoryRouter>,
     );
 
-    const staffLink = await screen.findByRole("link", { name: "운영진 관리" });
-    const invitationsLink = screen.getByRole("link", { name: "받은 초대" });
-    expect(staffLink).not.toHaveAttribute("aria-current");
-    expect(invitationsLink).toHaveAttribute("aria-current", "page");
+    const sidebar = document.getElementById("app-sidebar")!;
+    const topNavigation = screen.getByTestId("mobile-top-navigation");
+    await waitFor(() => expect(within(sidebar).getByRole("link", { name: "운영진 관리" })).toBeInTheDocument());
+    expect(within(sidebar).getByRole("link", { name: "운영진 관리" })).not.toHaveAttribute("aria-current");
+    expect(within(sidebar).getByRole("link", { name: "받은 초대" })).toHaveAttribute("aria-current", "page");
+    expect(within(topNavigation).getByRole("link", { name: "받은 초대" })).toHaveAttribute("aria-current", "page");
   });
 
-  it("좁은 화면용 메뉴 버튼으로 사이드바를 열고 닫는다", async () => {
+  it("좁은 화면에서는 사이드바 대신 상단 가로 메뉴를 표시한다", async () => {
     render(
       <MemoryRouter>
         <AppLayout clubId="club-1"><div>현재 화면</div></AppLayout>
       </MemoryRouter>,
     );
 
-    const openButton = screen.getByRole("button", { name: "메뉴 열기" });
+    const topNavigation = screen.getByTestId("mobile-top-navigation");
+    const topMenu = within(topNavigation).getByRole("navigation", { name: "상단 메뉴" });
     const sidebar = document.getElementById("app-sidebar");
-    expect(openButton.parentElement).toHaveClass("lg:hidden");
-    expect(openButton.parentElement).toHaveClass("sticky", "top-0");
-    expect(sidebar).toHaveClass("lg:relative", "lg:translate-x-0");
-    expect(sidebar).not.toHaveClass("md:relative", "md:translate-x-0");
-    expect(openButton).toHaveAttribute("aria-expanded", "false");
-    expect(sidebar).toHaveClass("-translate-x-full");
-
-    fireEvent.click(openButton);
-    expect(openButton).toHaveAttribute("aria-expanded", "true");
-    expect(sidebar).toHaveClass("translate-x-0");
-
-    fireEvent.click(screen.getByRole("button", { name: "사이드바 닫기" }));
-    expect(openButton).toHaveAttribute("aria-expanded", "false");
-    expect(sidebar).toHaveClass("-translate-x-full");
+    expect(topNavigation).toHaveClass("sticky", "top-0", "lg:hidden");
+    expect(topMenu).toHaveClass("overflow-x-auto");
+    expect(within(topMenu).getByRole("link", { name: "대시보드" })).toBeInTheDocument();
+    expect(within(topMenu).getByRole("link", { name: "부원 관리" })).toBeInTheDocument();
+    expect(sidebar).toHaveClass("hidden", "lg:flex");
+    expect(screen.queryByRole("button", { name: "메뉴 열기" })).not.toBeInTheDocument();
   });
 });

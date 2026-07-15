@@ -29,6 +29,12 @@ const statusLabel: Record<GenerationMemberStatus, string> = {
   WITHDRAWN: "탈퇴",
 };
 
+const statusSortOrder: Record<GenerationMemberStatus, number> = {
+  ACTIVE: 0,
+  INACTIVE: 1,
+  WITHDRAWN: 2,
+};
+
 const duesStatusLabel: Record<GenerationMemberDuesStatus, string> = {
   UNKNOWN: "확인 필요",
   UNPAID: "미납",
@@ -383,22 +389,24 @@ export function MemberListPage() {
   const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase("ko-KR");
   const selectedMember = members.find(member => member.id === selectedMemberId) ?? null;
   const normalizedStudentNumber = studentNumberFilter.trim();
-  const filteredMembers = members.filter(member => {
-    if (normalizedSearchQuery) {
-      const searchableText = [member.name, member.studentNumber, member.email, member.phone ?? ""]
-        .join(" ")
-        .toLocaleLowerCase("ko-KR");
-      if (!searchableText.includes(normalizedSearchQuery)) return false;
-    }
-    if (normalizedStudentNumber && !member.studentNumber.includes(normalizedStudentNumber)) return false;
-    if (statusFilter !== "ALL" && member.status !== statusFilter) return false;
-    if (duesFilter !== "ALL" && member.duesStatus !== duesFilter) return false;
-    if (invitationFilter === "KAKAO_PENDING" && member.kakaoInvited) return false;
-    if (invitationFilter === "DISCORD_PENDING" && member.discordInvited) return false;
-    if (invitationFilter === "BOTH_PENDING" && (member.kakaoInvited || member.discordInvited)) return false;
-    if (invitationFilter === "COMPLETE" && (!member.kakaoInvited || !member.discordInvited)) return false;
-    return true;
-  });
+  const filteredMembers = members
+    .filter(member => {
+      if (normalizedSearchQuery) {
+        const searchableText = [member.name, member.studentNumber, member.email, member.phone ?? ""]
+          .join(" ")
+          .toLocaleLowerCase("ko-KR");
+        if (!searchableText.includes(normalizedSearchQuery)) return false;
+      }
+      if (normalizedStudentNumber && !member.studentNumber.includes(normalizedStudentNumber)) return false;
+      if (statusFilter !== "ALL" && member.status !== statusFilter) return false;
+      if (duesFilter !== "ALL" && member.duesStatus !== duesFilter) return false;
+      if (invitationFilter === "KAKAO_PENDING" && member.kakaoInvited) return false;
+      if (invitationFilter === "DISCORD_PENDING" && member.discordInvited) return false;
+      if (invitationFilter === "BOTH_PENDING" && (member.kakaoInvited || member.discordInvited)) return false;
+      if (invitationFilter === "COMPLETE" && (!member.kakaoInvited || !member.discordInvited)) return false;
+      return true;
+    })
+    .sort((left, right) => statusSortOrder[left.status] - statusSortOrder[right.status]);
   const kakaoPendingCount = members.filter(member => !member.kakaoInvited).length;
   const discordPendingCount = members.filter(member => !member.discordInvited).length;
   const filterApplied = normalizedSearchQuery !== ""

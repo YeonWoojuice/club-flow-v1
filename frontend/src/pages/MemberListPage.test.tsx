@@ -278,6 +278,22 @@ describe("MemberListPage", () => {
     expect(screen.getByRole("dialog", { name: "이부원 부원 정보" })).toBeInTheDocument();
   });
 
+  it("활동 중, 비활동, 탈퇴 순서로 부원 목록을 정렬한다", async () => {
+    const withdrawnMember: GenerationMember = {
+      ...inactiveUnpaidMember,
+      id: "member-3",
+      personId: "person-3",
+      name: "박부원",
+      email: "withdrawn@example.com",
+      status: "WITHDRAWN",
+    };
+    listMembers.mockResolvedValueOnce([withdrawnMember, inactiveUnpaidMember, activeMember]);
+    renderPage();
+
+    const memberButtons = await screen.findAllByRole("button", { name: /부원 정보 보기/ });
+    expect(memberButtons.map(button => button.textContent)).toEqual(["김부원", "이부원", "박부원"]);
+  });
+
   it("제목 행의 상태 필터를 적용하고 적용된 제목을 회색으로 표시한다", async () => {
     listMembers.mockResolvedValueOnce([activeMember, inactiveUnpaidMember]);
     renderPage();
