@@ -1,7 +1,8 @@
 package com.clubflow.backend.member;
 
 public enum GenerationMemberStatus {
-    ACTIVE,
+    REGULAR,
+    ASSOCIATE,
     INACTIVE,
     WITHDRAWN
 }

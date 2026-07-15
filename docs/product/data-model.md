@@ -229,7 +229,7 @@ generations 1 ── N applications N ── 1 persons
 | generation_id | UUID | FK → generations.id |
 | person_id | UUID | FK → persons.id |
 | joined_source | VARCHAR(30) | APPLICATION_ACCEPT, MANUAL, RETENTION |
-| status | VARCHAR(20) | ACTIVE, INACTIVE, WITHDRAWN |
+| status | VARCHAR(20) | REGULAR, ASSOCIATE, INACTIVE, WITHDRAWN |
 | dues_status | VARCHAR(20) | UNKNOWN, UNPAID, PAID, EXEMPT |
 | kakao_invited | BOOLEAN | NOT NULL, 기본값 FALSE |
 | discord_invited | BOOLEAN | NOT NULL, 기본값 FALSE |
@@ -239,8 +239,8 @@ generations 1 ── N applications N ── 1 persons
 | updated_at | TIMESTAMPTZ | NOT NULL |
 
 - `UNIQUE(generation_id, person_id)`로 같은 학기의 중복 부원을 방지한다.
-- 합격 결과 메일이 `SENT`로 기록될 때 `APPLICATION_ACCEPT/ACTIVE`로 생성한다.
-- 이전 학기 부원을 이월하면 `RETENTION/ACTIVE`로 생성한다.
+- 합격 결과 메일이 `SENT`로 기록될 때 `APPLICATION_ACCEPT/REGULAR`로 생성한다.
+- 이전 학기 부원을 이월하면 `RETENTION/REGULAR`로 생성한다.
 - 기존·신규 부원의 회비 상태는 `UNKNOWN`으로 시작하고 회계 담당 운영진이 직접 확인한다.
 - 회비 상태는 납부 금액이나 회계 거래가 아니라 해당 학기의 확인 결과만 나타낸다.
 - 동아리는 generation을 통해 판별하므로 중복 `club_id`를 저장하지 않는다.
@@ -251,8 +251,8 @@ generations 1 ── N applications N ── 1 persons
 |---|---|---|
 | id | UUID | PK |
 | generation_member_id | UUID | FK → generation_members.id |
-| previous_status | VARCHAR(20) | ACTIVE, INACTIVE, WITHDRAWN |
-| new_status | VARCHAR(20) | ACTIVE, INACTIVE, WITHDRAWN |
+| previous_status | VARCHAR(20) | REGULAR, ASSOCIATE, INACTIVE, WITHDRAWN |
+| new_status | VARCHAR(20) | REGULAR, ASSOCIATE, INACTIVE, WITHDRAWN |
 | reason | VARCHAR(500) | NULL 허용 |
 | changed_by_user_id | UUID | FK → users.id |
 | changed_at | TIMESTAMPTZ | NOT NULL |
@@ -261,7 +261,8 @@ generations 1 ── N applications N ── 1 persons
 - 탈퇴(`WITHDRAWN`) 처리에는 사유가 반드시 필요하다.
 - 변경자와 변경 시간을 남겨 운영진이 상태 변경 경위를 확인할 수 있게 한다.
 - 같은 상태를 다시 요청하면 이력을 중복 생성하지 않는다.
-- `ACTIVE`에서 바로 `WITHDRAWN`으로 바꿀 수 없으며 먼저 `INACTIVE`로 변경해야 한다.
+- `REGULAR`과 `ASSOCIATE`는 서로 변경할 수 있고 두 상태 모두 `INACTIVE`로 변경할 수 있다.
+- `WITHDRAWN`으로 변경하려면 먼저 `INACTIVE`로 변경해야 한다.
 
 ## application_import_sources
 

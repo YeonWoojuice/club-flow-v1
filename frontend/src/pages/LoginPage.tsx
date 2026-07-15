@@ -22,17 +22,17 @@ export function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-full items-center justify-center bg-[var(--surface)] px-5 py-10 font-body">
+    <main className="flex min-h-full items-center justify-center bg-white px-5 py-10 font-body">
       <div className="grid w-full max-w-md lg:max-w-4xl lg:grid-cols-2 lg:items-stretch lg:gap-5">
-        <section className="hidden min-h-[420px] overflow-hidden rounded-[14px] border border-[var(--border-subtle)] bg-white shadow-sm lg:block" aria-label="CrewCat 소개 이미지">
+        <section className="hidden min-h-[420px] overflow-hidden bg-white lg:block" aria-label="CrewCat 소개 이미지">
           <img
-            src="/crewcat-login-cat.png"
-            alt="노트북으로 동아리를 관리하는 CrewCat 고양이"
+            src="/crewcat-login-cat.png?v=20260715-cafe"
+            alt="카페에서 노트북으로 동아리를 관리하는 CrewCat 고양이"
             className="h-full w-full object-cover"
           />
         </section>
 
-        <section className="min-h-[420px] rounded-[14px] border border-[var(--border-subtle)] bg-white p-7 shadow-sm sm:p-10">
+        <section className="min-h-[420px] bg-white p-7 sm:p-10">
           <Brand />
           <h1 className="mt-10 text-2xl font-extrabold tracking-[-0.5px]">동아리 운영을 한곳에서</h1>
           <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">

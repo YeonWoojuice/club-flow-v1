@@ -15,21 +15,21 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class GenerationMemberTest {
 
     @Test
-    void 활동중과_비활동_상태는_서로_변경할_수_있다() {
+    void 회원과_준회원은_서로_변경할_수_있다() {
         GenerationMember member = createMember();
 
-        assertThat(member.changeStatus(GenerationMemberStatus.INACTIVE)).isTrue();
-        assertThat(member.getStatus()).isEqualTo(GenerationMemberStatus.INACTIVE);
-        assertThat(member.changeStatus(GenerationMemberStatus.ACTIVE)).isTrue();
-        assertThat(member.getStatus()).isEqualTo(GenerationMemberStatus.ACTIVE);
+        assertThat(member.changeStatus(GenerationMemberStatus.ASSOCIATE)).isTrue();
+        assertThat(member.getStatus()).isEqualTo(GenerationMemberStatus.ASSOCIATE);
+        assertThat(member.changeStatus(GenerationMemberStatus.REGULAR)).isTrue();
+        assertThat(member.getStatus()).isEqualTo(GenerationMemberStatus.REGULAR);
     }
 
     @Test
     void 같은_상태로_변경하면_아무것도_바꾸지_않는다() {
         GenerationMember member = createMember();
 
-        assertThat(member.changeStatus(GenerationMemberStatus.ACTIVE)).isFalse();
-        assertThat(member.getStatus()).isEqualTo(GenerationMemberStatus.ACTIVE);
+        assertThat(member.changeStatus(GenerationMemberStatus.REGULAR)).isFalse();
+        assertThat(member.getStatus()).isEqualTo(GenerationMemberStatus.REGULAR);
     }
 
     @Test
@@ -38,17 +38,19 @@ class GenerationMemberTest {
         member.changeStatus(GenerationMemberStatus.INACTIVE);
         member.changeStatus(GenerationMemberStatus.WITHDRAWN);
 
-        assertThatThrownBy(() -> member.changeStatus(GenerationMemberStatus.ACTIVE))
+        assertThatThrownBy(() -> member.changeStatus(GenerationMemberStatus.REGULAR))
                 .isInstanceOf(ConflictException.class)
                 .hasMessage("탈퇴한 부원의 상태는 변경할 수 없습니다.");
     }
 
     @Test
-    void 활동중인_부원도_중도_탈퇴할_수_있다() {
+    void 회원은_비활동을_거치지_않고_바로_탈퇴할_수_없다() {
         GenerationMember member = createMember();
 
-        assertThat(member.changeStatus(GenerationMemberStatus.WITHDRAWN)).isTrue();
-        assertThat(member.getStatus()).isEqualTo(GenerationMemberStatus.WITHDRAWN);
+        assertThatThrownBy(() -> member.changeStatus(GenerationMemberStatus.WITHDRAWN))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("탈퇴 처리를 하려면 먼저 비활동 상태로 변경해 주세요.");
+        assertThat(member.getStatus()).isEqualTo(GenerationMemberStatus.REGULAR);
     }
 
     @Test

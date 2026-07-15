@@ -89,7 +89,7 @@ describe("ApplicationDetailPage", () => {
     getApplication.mockResolvedValue({
       ...accepted,
       generationMemberId: "legacy-member-1",
-      generationMemberStatus: "ACTIVE",
+      generationMemberStatus: "REGULAR",
     });
     renderPage();
 

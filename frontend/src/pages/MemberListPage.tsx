@@ -24,15 +24,17 @@ const sourceLabel: Record<MemberJoinedSource, string> = {
 };
 
 const statusLabel: Record<GenerationMemberStatus, string> = {
-  ACTIVE: "활동 중",
+  REGULAR: "회원",
+  ASSOCIATE: "준회원",
   INACTIVE: "비활동",
   WITHDRAWN: "탈퇴",
 };
 
 const statusSortOrder: Record<GenerationMemberStatus, number> = {
-  ACTIVE: 0,
-  INACTIVE: 1,
-  WITHDRAWN: 2,
+  REGULAR: 0,
+  ASSOCIATE: 1,
+  INACTIVE: 2,
+  WITHDRAWN: 3,
 };
 
 const duesStatusLabel: Record<GenerationMemberDuesStatus, string> = {
@@ -53,10 +55,17 @@ const invitationFilterLabel = {
 const memberGridGeometry = "grid-cols-2 gap-x-3 gap-y-2 px-3 lg:min-w-[1220px] lg:grid-cols-[minmax(90px,0.75fr)_95px_110px_minmax(170px,1.35fr)_72px_58px_92px_minmax(130px,1fr)_minmax(150px,1.1fr)] lg:px-4";
 
 function StatusBadge({ status }: { status: GenerationMemberStatus }) {
-  if (status === "ACTIVE") {
+  if (status === "REGULAR") {
     return (
       <span className="inline-flex items-center rounded-md bg-[var(--success-soft)] px-2.5 py-1 text-[10px] font-extrabold text-[var(--success)]">
-        활동 중
+        회원
+      </span>
+    );
+  }
+  if (status === "ASSOCIATE") {
+    return (
+      <span className="inline-flex items-center rounded-md bg-[var(--navy-soft)] px-2.5 py-1 text-[10px] font-extrabold text-[var(--navy)]">
+        준회원
       </span>
     );
   }

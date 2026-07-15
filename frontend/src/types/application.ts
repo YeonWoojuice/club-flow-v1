@@ -36,7 +36,7 @@ export type ApplicationSummary = {
   resultEmailStatus: ApplicationResultEmailStatus;
   resultEmailSentAt: string | null;
   generationMemberId: string | null;
-  generationMemberStatus: "ACTIVE" | "INACTIVE" | "WITHDRAWN" | null;
+  generationMemberStatus: "REGULAR" | "ASSOCIATE" | "INACTIVE" | "WITHDRAWN" | null;
   sourceType: ApplicationSourceType;
   submittedAt: string;
 };

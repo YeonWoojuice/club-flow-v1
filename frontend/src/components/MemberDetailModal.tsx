@@ -28,9 +28,10 @@ const sourceLabel: Record<MemberJoinedSource, string> = {
 };
 
 const statusLabel: Record<GenerationMemberStatus, string> = {
-  ACTIVE: "활동 중",
+  REGULAR: "회원",
+  ASSOCIATE: "준회원",
   INACTIVE: "비활동",
-  WITHDRAWN: "중도 탈퇴",
+  WITHDRAWN: "탈퇴",
 };
 
 const duesStatusLabel = {
@@ -41,13 +42,15 @@ const duesStatusLabel = {
 } as const;
 
 const statusActionLabel: Record<GenerationMemberStatus, string> = {
-  ACTIVE: "활동 중으로 변경",
+  REGULAR: "회원으로 변경",
+  ASSOCIATE: "준회원으로 변경",
   INACTIVE: "비활동으로 변경",
-  WITHDRAWN: "중도 탈퇴 처리",
+  WITHDRAWN: "탈퇴 처리",
 };
 
 function defaultTargetStatus(status: GenerationMemberStatus): GenerationMemberStatus {
-  return status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+  if (status === "REGULAR") return "ASSOCIATE";
+  return "REGULAR";
 }
 
 function formatChangedAt(value: string) {
@@ -267,7 +270,7 @@ export function MemberDetailModal({ member, returnFocusRef, onClose, onUpdated }
               <InfoRow label="가입 경로" value={sourceLabel[member.joinedSource]} />
             </InfoSection>
             <InfoSection title="운영 상태">
-              <InfoRow label="활동 상태" value={statusLabel[member.status]} />
+              <InfoRow label="부원 상태" value={statusLabel[member.status]} />
               <InfoRow label="회비" value={duesStatusLabel[member.duesStatus]} />
               <InfoRow label="카카오톡 초대" value={member.kakaoInvited ? "완료" : "미완료"} />
               <InfoRow label="디스코드 초대" value={member.discordInvited ? "완료" : "미완료"} />
@@ -277,9 +280,9 @@ export function MemberDetailModal({ member, returnFocusRef, onClose, onUpdated }
 
         {mode === "STATUS_EDIT" && member.status !== "WITHDRAWN" && (
           <form onSubmit={handleSubmit} className="mt-5 rounded-xl border border-[var(--border-subtle)] p-4 sm:p-5">
-            <h3 className="text-sm font-extrabold text-[var(--text-primary)]">활동 상태 변경</h3>
+            <h3 className="text-sm font-extrabold text-[var(--text-primary)]">부원 상태 변경</h3>
             <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
-              현재 상태는 {statusLabel[member.status]}입니다. 중도 탈퇴는 처리 후 되돌릴 수 없습니다.
+              현재 상태는 {statusLabel[member.status]}입니다. 탈퇴는 비활동 상태에서만 처리할 수 있습니다.
             </p>
             <div className="mt-4 grid gap-4">
               <label className="grid gap-1.5 text-xs font-bold text-[var(--text-primary)]">
@@ -294,10 +297,13 @@ export function MemberDetailModal({ member, returnFocusRef, onClose, onUpdated }
                   disabled={submitting}
                   className="control"
                 >
-                  {member.status === "ACTIVE" && <option value="INACTIVE">비활동</option>}
-                  {member.status === "ACTIVE" && <option value="WITHDRAWN">중도 탈퇴</option>}
-                  {member.status === "INACTIVE" && <option value="ACTIVE">활동 중</option>}
-                  {member.status === "INACTIVE" && <option value="WITHDRAWN">중도 탈퇴</option>}
+                  {member.status === "REGULAR" && <option value="ASSOCIATE">준회원</option>}
+                  {member.status === "REGULAR" && <option value="INACTIVE">비활동</option>}
+                  {member.status === "ASSOCIATE" && <option value="REGULAR">회원</option>}
+                  {member.status === "ASSOCIATE" && <option value="INACTIVE">비활동</option>}
+                  {member.status === "INACTIVE" && <option value="REGULAR">회원</option>}
+                  {member.status === "INACTIVE" && <option value="ASSOCIATE">준회원</option>}
+                  {member.status === "INACTIVE" && <option value="WITHDRAWN">탈퇴</option>}
                 </select>
               </label>
               <label className="grid gap-1.5 text-xs font-bold text-[var(--text-primary)]">
@@ -313,7 +319,7 @@ export function MemberDetailModal({ member, returnFocusRef, onClose, onUpdated }
                   disabled={submitting}
                   aria-required={targetStatus === "WITHDRAWN"}
                   className="resize-y rounded-lg border border-[var(--border-subtle)] bg-white px-3 py-2 text-sm text-[var(--text-primary)]"
-                  placeholder={targetStatus === "WITHDRAWN" ? "중도 탈퇴 사유를 입력해 주세요." : "필요한 경우 사유를 입력해 주세요."}
+                  placeholder={targetStatus === "WITHDRAWN" ? "탈퇴 사유를 입력해 주세요." : "필요한 경우 사유를 입력해 주세요."}
                 />
               </label>
               <p className="text-right text-[10px] text-[var(--text-secondary)]">{reason.length}/500자</p>
@@ -323,13 +329,13 @@ export function MemberDetailModal({ member, returnFocusRef, onClose, onUpdated }
                 </p>
               )}
               {withdrawalConfirmOpen && (
-                <div role="alertdialog" aria-label="중도 탈퇴 최종 확인" className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-4">
-                  <p className="text-sm font-extrabold text-[var(--danger)]">정말 중도 탈퇴 처리할까요?</p>
-                  <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">처리 후에는 활동 중이나 비활동 상태로 되돌릴 수 없습니다.</p>
+                <div role="alertdialog" aria-label="탈퇴 최종 확인" className="rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-4">
+                  <p className="text-sm font-extrabold text-[var(--danger)]">정말 탈퇴 처리할까요?</p>
+                  <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">처리 후에는 회원·준회원·비활동 상태로 되돌릴 수 없습니다.</p>
                   <div className="mt-3 flex justify-end gap-2">
                     <button type="button" disabled={submitting} onClick={() => setWithdrawalConfirmOpen(false)} className="rounded-lg px-3 py-2 text-xs font-bold text-[var(--text-secondary)]">계속 수정</button>
                     <button type="button" disabled={submitting} onClick={() => void saveStatusChange()} className="rounded-lg bg-[var(--danger)] px-3 py-2 text-xs font-extrabold text-white disabled:opacity-40">
-                      {submitting ? "처리 중..." : "중도 탈퇴 확정"}
+                      {submitting ? "처리 중..." : "탈퇴 확정"}
                     </button>
                   </div>
                 </div>

@@ -27,7 +27,7 @@ const activeMember: GenerationMember = {
   phone: "010-1111-2222",
   studentNumber: "20260001",
   joinedSource: "APPLICATION_ACCEPT",
-  status: "ACTIVE",
+  status: "REGULAR",
   duesStatus: "PAID",
   kakaoInvited: true,
   discordInvited: false,
@@ -74,11 +74,12 @@ describe("MemberDetailModal", () => {
     expect(dialog).toHaveTextContent("카카오톡 초대");
   });
 
-  it("활동 중 부원을 비활동으로 바꾸고 상세 창의 값을 갱신한다", async () => {
+  it("회원을 비활동으로 바꾸고 상세 창의 값을 갱신한다", async () => {
     const { onUpdated } = renderModal();
 
     fireEvent.click(screen.getByRole("tab", { name: "상태 변경" }));
-    expect(screen.getByLabelText("변경할 상태")).toHaveValue("INACTIVE");
+    expect(screen.getByLabelText("변경할 상태")).toHaveValue("ASSOCIATE");
+    fireEvent.change(screen.getByLabelText("변경할 상태"), { target: { value: "INACTIVE" } });
     fireEvent.change(screen.getByLabelText("사유 (선택)"), { target: { value: "군 복무" } });
     fireEvent.click(screen.getByRole("button", { name: "비활동으로 변경" }));
 
@@ -90,22 +91,22 @@ describe("MemberDetailModal", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("비활동으로 변경했습니다");
   });
 
-  it("중도 탈퇴는 사유와 한 번 더 확인을 받은 뒤에만 저장한다", async () => {
+  it("비활동 부원의 탈퇴는 사유와 한 번 더 확인을 받은 뒤에만 저장한다", async () => {
     changeGenerationMemberStatus.mockResolvedValueOnce({ ...activeMember, status: "WITHDRAWN" });
-    renderModal();
+    renderModal({ ...activeMember, status: "INACTIVE" });
 
     fireEvent.click(screen.getByRole("tab", { name: "상태 변경" }));
     fireEvent.change(screen.getByLabelText("변경할 상태"), { target: { value: "WITHDRAWN" } });
-    fireEvent.click(screen.getByRole("button", { name: "중도 탈퇴 처리" }));
+    fireEvent.click(screen.getByRole("button", { name: "탈퇴 처리" }));
     expect(screen.getByRole("alert")).toHaveTextContent("탈퇴 사유를 입력해 주세요.");
     expect(changeGenerationMemberStatus).not.toHaveBeenCalled();
 
     fireEvent.change(screen.getByLabelText("사유 (필수)"), { target: { value: "개인 사정" } });
-    fireEvent.click(screen.getByRole("button", { name: "중도 탈퇴 처리" }));
-    expect(screen.getByRole("alertdialog", { name: "중도 탈퇴 최종 확인" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "탈퇴 처리" }));
+    expect(screen.getByRole("alertdialog", { name: "탈퇴 최종 확인" })).toBeInTheDocument();
     expect(changeGenerationMemberStatus).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "중도 탈퇴 확정" }));
+    fireEvent.click(screen.getByRole("button", { name: "탈퇴 확정" }));
     await waitFor(() => expect(changeGenerationMemberStatus).toHaveBeenCalledWith(
       "member-1",
       { status: "WITHDRAWN", reason: "개인 사정" },
@@ -119,6 +120,7 @@ describe("MemberDetailModal", () => {
     renderModal();
 
     fireEvent.click(screen.getByRole("tab", { name: "상태 변경" }));
+    fireEvent.change(screen.getByLabelText("변경할 상태"), { target: { value: "INACTIVE" } });
     fireEvent.click(screen.getByRole("button", { name: "비활동으로 변경" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("탈퇴한 부원의 상태는 변경할 수 없습니다.");
@@ -130,7 +132,7 @@ describe("MemberDetailModal", () => {
       .mockRejectedValueOnce(new ApiError(500, "변경 이력을 조회하지 못했습니다."))
       .mockResolvedValueOnce([{
         id: "history-1",
-        previousStatus: "ACTIVE",
+        previousStatus: "REGULAR",
         newStatus: "INACTIVE",
         reason: "군 복무",
         changedByUserId: "user-1",
@@ -144,7 +146,7 @@ describe("MemberDetailModal", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("변경 이력을 조회하지 못했습니다.");
 
     fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
-    expect(await screen.findByText("활동 중 → 비활동")).toBeInTheDocument();
+    expect(await screen.findByText("회원 → 비활동")).toBeInTheDocument();
     expect(screen.getByText("사유: 군 복무")).toBeInTheDocument();
   });
 

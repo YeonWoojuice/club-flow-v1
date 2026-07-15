@@ -92,7 +92,7 @@ public class GenerationMember {
                 generation,
                 person,
                 MemberJoinedSource.APPLICATION_ACCEPT,
-                GenerationMemberStatus.ACTIVE
+                GenerationMemberStatus.REGULAR
         );
     }
 
@@ -101,7 +101,7 @@ public class GenerationMember {
                 generation,
                 person,
                 MemberJoinedSource.RETENTION,
-                GenerationMemberStatus.ACTIVE
+                GenerationMemberStatus.REGULAR
         );
     }
 
@@ -111,6 +111,10 @@ public class GenerationMember {
         }
         if (status == GenerationMemberStatus.WITHDRAWN) {
             throw new ConflictException("탈퇴한 부원의 상태는 변경할 수 없습니다.");
+        }
+        if (targetStatus == GenerationMemberStatus.WITHDRAWN
+                && status != GenerationMemberStatus.INACTIVE) {
+            throw new ConflictException("탈퇴 처리를 하려면 먼저 비활동 상태로 변경해 주세요.");
         }
         this.status = targetStatus;
         this.updatedAt = Instant.now();

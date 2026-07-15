@@ -124,7 +124,7 @@ class RetentionImportIntegrationTests {
         assertThat(second.createdCount()).isZero();
         assertThat(second.alreadyMemberCount()).isEqualTo(1);
         assertThat(targetMember.getJoinedSource()).isEqualTo(MemberJoinedSource.RETENTION);
-        assertThat(targetMember.getStatus()).isEqualTo(GenerationMemberStatus.ACTIVE);
+        assertThat(targetMember.getStatus()).isEqualTo(GenerationMemberStatus.REGULAR);
         assertThat(previousMember.getJoinedSource()).isEqualTo(MemberJoinedSource.APPLICATION_ACCEPT);
     }
 

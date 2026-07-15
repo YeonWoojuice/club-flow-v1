@@ -207,7 +207,7 @@ export function ApplicationDetailPage() {
                     </button>
                   )}
                   {!canCorrect && <p className="rounded-lg bg-[var(--panel-muted)] p-3 text-xs text-[var(--text-secondary)]">{application.generationMemberId ? "기존 방식으로 이미 부원 등록된 결과는 변경할 수 없습니다." : "메일 전송을 시작했거나 완료하여 결과가 확정되었습니다."}</p>}
-                  {application.generationMemberStatus && <p className="rounded-lg bg-[var(--success-soft)] p-3 text-xs font-bold text-[var(--success)]">부원 등록 완료 · {application.generationMemberStatus === "ACTIVE" ? "활동 중" : application.generationMemberStatus === "INACTIVE" ? "비활동" : "탈퇴"}</p>}
+                  {application.generationMemberStatus && <p className="rounded-lg bg-[var(--success-soft)] p-3 text-xs font-bold text-[var(--success)]">부원 등록 완료 · {application.generationMemberStatus === "REGULAR" ? "회원" : application.generationMemberStatus === "ASSOCIATE" ? "준회원" : application.generationMemberStatus === "INACTIVE" ? "비활동" : "탈퇴"}</p>}
                 </div>
               ) : (
                 <p className="mt-4 rounded-lg bg-[var(--panel-muted)] p-3 text-xs text-[var(--text-secondary)]">취소된 지원서는 상태를 변경할 수 없습니다.</p>
